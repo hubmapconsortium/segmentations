@@ -10,7 +10,7 @@ def get_MIBI_slices(img_dir):
 	os.system(nucleus_channel)
 	os.system(cyto_channel)
 	os.system(membrane_channel)
-	
+
 def get_CellDIVE_slices(img_dir, img_name):
 	img_path = join(img_dir, img_name)
 	image = imread(img_path)
