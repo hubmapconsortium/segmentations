@@ -1,7 +1,7 @@
+import argparse
 import os
 import sys
 import time
-from os.path import join
 
 import numpy as np
 from cellpose import models
@@ -12,13 +12,13 @@ from cellpose import utils
 
 from utils import *
 
-if __name__ == "__main__":
+
+def main(img_dir: Path, out_dir: Path):
     use_GPU = utils.use_gpu()
     print("GPU activated? %d" % use_GPU)
 
-    file_dir = sys.argv[1]
-    im1 = imread(join(file_dir, "cytoplasm.tif"))
-    im2 = imread(join(file_dir, "nucleus.tif"))
+    im1 = imread(path_to_str(img_dir / "nucleus.tif"))
+    im2 = imread(path_to_str(img_dir / "membrane.tif"))
     im = np.stack((im1, im2))
 
     # DEFINE CELLPOSE MODEL
@@ -45,7 +45,6 @@ if __name__ == "__main__":
     cell_mask, flows, styles, diams = model_cyto.eval(
         im, diameter=None, flow_threshold=None, channels=channels
     )
-    cell_boundary_mask = get_boundary(cell_mask)
 
     # get nucleus masks
     model_nuc = models.Cellpose(gpu=use_GPU, model_type="nuclei")
@@ -53,7 +52,23 @@ if __name__ == "__main__":
     nuc_mask, flows, styles, diams = model_nuc.eval(
         im2, diameter=None, flow_threshold=None, channels=channels
     )
+
+    cell_boundary_mask = get_boundary(cell_mask)
     nuc_boundary_mask = get_boundary(nuc_mask)
-    save_dir = join(file_dir, "cellpose")
-    os.makedirs(save_dir)
-    save_ome_tiff(save_dir, cell_mask, nuc_mask, cell_boundary_mask, nuc_boundary_mask)
+
+    save_segmentation_masks(out_dir, cell_mask, nuc_mask, cell_boundary_mask, nuc_boundary_mask)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--img_dir",
+        type=Path,
+        help="path to directory with images nucleus.tif, cytoplasm.tif, membrane.tif",
+    )
+    parser.add_argument(
+        "--out_dir", type=Path, help="path to directory to output segmentation masks"
+    )
+    args = parser.parse_args()
+
+    main(args.img_dir, args.out_dir)

@@ -1,10 +1,20 @@
 # utils.py>
 import os
 from os.path import join
+from pathlib import Path
 
 import numpy as np
+import tifffile as tif
 from skimage.segmentation import find_boundaries
-from tifffile import TiffWriter
+
+
+def path_to_str(path: Path):
+    return str(path.absolute().as_posix())
+
+
+def make_dir_if_not_exists(dir_path: Path):
+    if not dir_path.exists():
+        dir_path.mkdir(parents=True)
 
 
 def get_indexed_mask(mask, boundary):
@@ -20,15 +30,8 @@ def get_boundary(mask):
     return mask_boundary_indexed
 
 
-def save_ome_tiff(img_dir, cell, nuc, cell_b, nuc_b):
-    img_name = "segmentation.ome.tiff"
-    cell = cell.astype(np.int32)
-    nuc = nuc.astype(np.int32)
-    cell_b = cell_b.astype(np.int32)
-    nuc_b = nuc_b.astype(np.int32)
-    with TiffWriter(join(img_dir, img_name)) as tif:
-        tif.save(cell)
-        tif.save(nuc)
-        tif.save(cell_b)
-        tif.save(nuc_b)
-        metadata = {"axes": "ZYX", "Plane": {"PositionZ": [0.0, 1.0, 2.0, 3.0]}}
+def save_segmentation_masks(out_dir, cell, nuc, cell_b, nuc_b):
+    tif.imwrite(path_to_str(out_dir / "cell.tif"), cell.astype(np.uint32))
+    tif.imwrite(path_to_str(out_dir / "nucleus.tif"), nuc.astype(np.uint32))
+    tif.imwrite(path_to_str(out_dir / "cell_boundaries.tif"), cell_b.astype(np.uint32))
+    tif.imwrite(path_to_str(out_dir / "nucleus_boundaries.tif"), nuc_b.astype(np.uint32))
