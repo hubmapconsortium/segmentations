@@ -62,21 +62,14 @@ def fill_in_ome_meta_template(size_y: int, size_x: int, dtype) -> str:
 
 
 def save_segmentation_masks(out_dir, cell, nuc, cell_b, nuc_b):
-    ome_meta = fill_in_ome_meta_template(cell.shape[0], cell.shape[1], cell.dtype)
+    dtype = np.uint32
+    ome_meta = fill_in_ome_meta_template(cell.shape[0], cell.shape[1], dtype)
     out_path = path_to_str(out_dir / "mask.ome.tiff")
     TF = tif.TiffFile(out_path)
 
-    TF.write(
-        cell.astype(np.uint32), contiguous=True, photometric="minisblack", description=ome_meta
-    )
-    TF.write(
-        nuc.astype(np.uint32), contiguous=True, photometric="minisblack", description=ome_meta
-    )
-    TF.write(
-        cell_b.astype(np.uint32), contiguous=True, photometric="minisblack", description=ome_meta
-    )
-    TF.write(
-        nuc_b.astype(np.uint32), contiguous=True, photometric="minisblack", description=ome_meta
-    )
+    TF.write(cell.astype(dtype), contiguous=True, photometric="minisblack", description=ome_meta)
+    TF.write(nuc.astype(dtype), contiguous=True, photometric="minisblack", description=ome_meta)
+    TF.write(cell_b.astype(dtype), contiguous=True, photometric="minisblack", description=ome_meta)
+    TF.write(nuc_b.astype(dtype), contiguous=True, photometric="minisblack", description=ome_meta)
 
     TF.close()
