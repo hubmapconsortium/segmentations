@@ -24,4 +24,6 @@ RUN conda env update -f /tmp/environment.yml \
     && conda clean --index-cache --tarballs --yes \
     && rm /tmp/environment.yml
 
+COPY bin /opt
+
 CMD ["/bin/bash"]
