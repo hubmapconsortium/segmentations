@@ -2,34 +2,28 @@ import argparse
 import os
 import sys
 from pathlib import Path
-from subprocess import PIPE, run
 
 sys.path.append(os.getcwd())
-from utils import alpha_num_order, make_dir_if_not_exists, path_to_str
+from utils import alpha_num_order, make_dir_if_not_exists
+import deepcell_wrapper
+import cellpose_wrapper
 
 
 def run_segmentation(modality: str, img_dir: Path, out_dir: Path):
-    cmd_template = "python {wrapper} --img_dir {img_dir} --out_dir {out_dir}"
-
     out_dir_deepcell = out_dir / "deepcell"
     out_dir_cellpose = out_dir / "cellpose"
     make_dir_if_not_exists(out_dir_deepcell)
     make_dir_if_not_exists(out_dir_cellpose)
 
-    cmd1 = cmd_template.format(
-        wrapper="deepcell_wrapper.py",
-        img_dir=path_to_str(img_dir),
-        out_dir=path_to_str(out_dir_deepcell),
+    deepcell_wrapper.main(
+        img_dir=img_dir,
+        out_dir=out_dir_deepcell,
     )
 
-    cmd2 = cmd_template.format(
-        wrapper="cellpose_wrapper.py",
-        img_dir=path_to_str(img_dir),
-        out_dir=path_to_str(out_dir_cellpose),
+    cellpose_wrapper.main(
+        img_dir=img_dir,
+        out_dir=out_dir_cellpose,
     )
-
-    run(cmd1, shell=True, stdout=PIPE, stderr=PIPE)
-    run(cmd2, shell=True, stdout=PIPE, stderr=PIPE)
 
 
 #
@@ -64,7 +58,7 @@ def collect_img_dirs(dataset_dir: Path):
 
 def main(modality: str, dataset_dir: Path):
     img_dirs = collect_img_dirs(dataset_dir)
-    out_dir = Path("./output/")
+    out_dir = Path("/output/")
     for dir_name, dir_path in img_dirs.items():
         img_out_dir = out_dir / dir_name
         run_segmentation(modality, dir_path, img_out_dir)

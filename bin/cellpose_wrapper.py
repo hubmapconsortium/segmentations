@@ -7,18 +7,15 @@ import numpy as np
 from cellpose import models
 from skimage.io import imread, imsave
 
-sys.path.append(os.getcwd())
-from cellpose import utils
-
 from utils import *
 
 
 def main(img_dir: Path, out_dir: Path):
-    use_GPU = utils.use_gpu()
+    use_GPU = models.use_gpu()
     print("GPU activated? %d" % use_GPU)
 
-    im1 = imread(path_to_str(img_dir / "nucleus.tif"))
-    im2 = imread(path_to_str(img_dir / "membrane.tif"))
+    im1 = imread(path_to_str(img_dir / "cytoplasm.tif"))
+    im2 = imread(path_to_str(img_dir / "nucleus.tif"))
     im = np.stack((im1, im2))
 
     # DEFINE CELLPOSE MODEL
