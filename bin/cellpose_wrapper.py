@@ -16,7 +16,7 @@ def main(img_dir: Path, out_dir: Path):
 
     im1 = imread(path_to_str(img_dir / "cytoplasm.tif"))
     im2 = imread(path_to_str(img_dir / "nucleus.tif"))
-    im = np.stack((im1, im2))
+    im = np.stack((im1, im2), axis=0)
 
     # DEFINE CELLPOSE MODEL
     # model_type='cyto' or model_type='nuclei'

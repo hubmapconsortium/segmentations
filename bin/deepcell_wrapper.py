@@ -43,7 +43,6 @@ def main(img_dir: Path, out_dir: Path):
     save_segmentation_masks(out_dir, cell_mask, nuc_mask, cell_boundary_mask, nuc_boundary_mask)
 
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
