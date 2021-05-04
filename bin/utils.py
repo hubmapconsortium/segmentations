@@ -1,13 +1,14 @@
-# utils.py>
 import os
 import re
 from os.path import join
 from pathlib import Path
+from typing import List
 
 import numpy as np
 import tifffile as tif
 from skimage.segmentation import find_boundaries
 
+Image = np.ndarray
 
 def alpha_num_order(string: str) -> str:
     """Returns all numbers on 5 digits to let sort the string with numeric order.
@@ -34,10 +35,13 @@ def get_indexed_mask(mask, boundary):
     return boundary
 
 
-def get_boundary(mask):
-    mask_boundary = find_boundaries(mask)
-    mask_boundary_indexed = get_indexed_mask(mask, mask_boundary)
-    return mask_boundary_indexed
+def get_boundary(masks: List[Image]) -> List[Image]:
+    boundaries = []
+    for mask in masks:
+        mask_boundary = find_boundaries(mask)
+        mask_boundary_indexed = get_indexed_mask(mask, mask_boundary)
+        boundaries.append(mask_boundary_indexed)
+    return boundaries
 
 
 def fill_in_ome_meta_template(size_y: int, size_x: int, dtype) -> str:
@@ -64,6 +68,7 @@ def fill_in_ome_meta_template(size_y: int, size_x: int, dtype) -> str:
 def save_segmentation_masks(out_dir, cell, nuc, cell_b, nuc_b):
     dtype = np.uint32
     ome_meta = fill_in_ome_meta_template(cell.shape[0], cell.shape[1], dtype)
+    make_dir_if_not_exists(out_dir)
     out_path = path_to_str(out_dir / "mask.ome.tiff")
     TW = tif.TiffWriter(out_path)
 
