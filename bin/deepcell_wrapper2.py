@@ -26,35 +26,34 @@ class DeepcellWrapper:
         config.gpu_options.per_process_gpu_memory_fraction = 0.9
         tf.compat.v1.keras.backend.set_session(tf.compat.v1.Session(config=config))
 
-    def segment(self, batch_img_dict: Dict[str, Dict[str, Image]], out_dir: Path):
-        cell_channels = self._prepare_channels(batch_img_dict)
+    def segment(self, img_batch: List[Dict[str, Image]]) -> List[Dict[str, Image]]:
+        cell_channels = self._prepare_channels(img_batch)
         gc.collect()
         masks = self._segment_cell_and_nucleus(cell_channels)
         cell_masks, nuc_masks = self._separate_batch(masks)
         cell_boundaries = get_boundary(cell_masks)
         nuc_boundaries = get_boundary(nuc_masks)
         gc.collect()
-        img_dirs = list(batch_img_dict.keys())
-        out_dirs = [out_dir / img_dir for img_dir in img_dirs]
-        self._save_masks(out_dirs, cell_masks, nuc_masks, cell_boundaries, nuc_boundaries)
+        batch_size = len(img_batch)
+        segmentation_output = []
+        for i in range(0, batch_size):
+            img_set = dict(
+                cell=cell_masks[i],
+                nucleus=nuc_masks[i],
+                cell_boundary=cell_boundaries[i],
+                nucleus_boundary=nuc_boundaries[i]
+            )
+            segmentation_output.append(img_set)
         gc.collect()
+        return segmentation_output
 
     def _segment_cell_and_nucleus(self, img_stack: Image) -> Image:
         return self._model.predict(img_stack, compartment="both")
 
-    def _save_masks(self, out_dirs, cell_masks, nuc_masks, cell_boundaries, nuc_boundaries):
-        for i in range(0, len(out_dirs)):
-            save_segmentation_masks(out_dirs[i],
-                                    cell_masks[i],
-                                    nuc_masks[i],
-                                    cell_boundaries[i],
-                                    nuc_boundaries[i]
-                                    )
-
-    def _prepare_channels(self, batch_img_dict: Dict[str, Dict[str, Image]]) -> Image:
+    def _prepare_channels(self, img_batch: List[Dict[str, Image]]) -> Image:
         cell_channels = []
-        for batch, imgs in batch_img_dict.items():
-            cell_ch = np.stack((imgs['nucleus'], imgs['membrane']), axis=-1)
+        for el in img_batch:
+            cell_ch = np.stack((el['nucleus'], el['cell']), axis=-1)
             cell_ch = np.expand_dims(cell_ch, 0)
             cell_channels.append(cell_ch)
         return np.concatenate(cell_channels, axis=0)

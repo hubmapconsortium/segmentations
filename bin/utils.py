@@ -10,6 +10,7 @@ from skimage.segmentation import find_boundaries
 
 Image = np.ndarray
 
+
 def alpha_num_order(string: str) -> str:
     """Returns all numbers on 5 digits to let sort the string with numeric order.
     Ex: alpha_num_order("a6b12.125")  ==> "a00006b00012.00125"
@@ -26,6 +27,14 @@ def path_to_str(path: Path):
 def make_dir_if_not_exists(dir_path: Path):
     if not dir_path.exists():
         dir_path.mkdir(parents=True)
+
+
+def get_img_listing(in_dir: Path) -> List[Path]:
+    allowed_extensions = (".tif", ".tiff")
+    listing = list(in_dir.iterdir())
+    img_listing = [f for f in listing if f.suffix in allowed_extensions]
+    img_listing = sorted(img_listing, key=lambda x: alpha_num_order(x.name))
+    return img_listing
 
 
 def get_indexed_mask(mask, boundary):
@@ -65,11 +74,11 @@ def fill_in_ome_meta_template(size_y: int, size_x: int, dtype) -> str:
     return ome_meta
 
 
-def save_segmentation_masks(out_dir, cell, nuc, cell_b, nuc_b):
+def save_segmentation_masks(out_dir, img_name: str, cell, nuc, cell_b, nuc_b):
     dtype = np.uint32
     ome_meta = fill_in_ome_meta_template(cell.shape[0], cell.shape[1], dtype)
     make_dir_if_not_exists(out_dir)
-    out_path = path_to_str(out_dir / "mask.ome.tiff")
+    out_path = path_to_str(out_dir / img_name)
     TW = tif.TiffWriter(out_path)
 
     TW.write(cell.astype(dtype), contiguous=True, photometric="minisblack", description=ome_meta)
