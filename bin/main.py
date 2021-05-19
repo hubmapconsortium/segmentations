@@ -95,7 +95,9 @@ def load_img_batch(dataset_dir: Path,
     all_img_info, all_img_sets = get_img_sets(img_dirs, segm_channel_names)
     num_sets = len(all_img_sets)
     n_batches = ceil(num_sets / batch_size)
+    print('Batch size is:', batch_size)
     for b in range(0, n_batches):
+        print('Loading image batch:', b+1, '/', n_batches)
         f = b * batch_size
         t = f + batch_size
         if t > num_sets:
@@ -138,6 +140,7 @@ def get_segmentation_method(method: str):
     else:
         msg = 'Incorrect segmentation method ' + method
         raise ValueError(msg)
+    print('Using segmentation method ' + method)
     return segmenter
 
 
@@ -156,7 +159,9 @@ def main(method: str, dataset_dir: Path, batch_size: int):
             info_batch, img_batch = next(img_batch_gen)
         except StopIteration:
             break
+        print('Performing segmentation')
         segmented_batch = segmenter.segment(img_batch)
+        print('Saving segmentation masks')
         save_masks(out_base_dir, out_base_img_name, info_batch, segmented_batch)
 
     fin = datetime.now()
