@@ -8,7 +8,7 @@ from datetime import datetime
 import numpy as np
 import tifffile as tif
 
-from utils import alpha_num_order, make_dir_if_not_exists, path_to_str, get_img_listing, save_segmentation_masks
+from utils import alpha_num_order, make_dir_if_not_exists, path_to_str, get_img_listing, write_stack_to_file
 
 Image = np.ndarray
 
@@ -89,7 +89,6 @@ def load_img_batch(dataset_dir: Path,
                    segm_channel_names: Tuple[str],
                    batch_size=10
                    ) -> Tuple[List[Dict[str, str]], List[Dict[str, Path]]]:
-
     """ output dict {img_dir : {img_set : {channel : Image}}}"""
     img_dirs = collect_img_dirs(dataset_dir)
     all_img_info, all_img_sets = get_img_sets(img_dirs, segm_channel_names)
@@ -97,7 +96,7 @@ def load_img_batch(dataset_dir: Path,
     n_batches = ceil(num_sets / batch_size)
     print('Batch size is:', batch_size)
     for b in range(0, n_batches):
-        print('Loading image batch:', b+1, '/', n_batches)
+        print('Loading image batch:', b + 1, '/', n_batches)
         f = b * batch_size
         t = f + batch_size
         if t > num_sets:
@@ -121,13 +120,13 @@ def save_masks(base_out_dir: Path, base_img_name: str, info: List[Dict[str, str]
         make_dir_if_not_exists(out_dir)
         img_name = img_set + '_' + base_img_name
         channels = imgs[i]
-        save_segmentation_masks(out_dir,
-                                img_name,
-                                channels["cell"],
-                                channels["nucleus"],
-                                channels["cell_boundary"],
-                                channels["nucleus_boundary"]
-                                )
+        mask_stack = np.stack([channels["cell"],
+                               channels["nucleus"],
+                               channels["cell_boundary"],
+                               channels["nucleus_boundary"]
+                               ],
+                              axis=0)
+        write_stack_to_file(out_dir, img_name, mask_stack)
 
 
 def get_segmentation_method(method: str):

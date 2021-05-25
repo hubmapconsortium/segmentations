@@ -74,16 +74,17 @@ def fill_in_ome_meta_template(size_y: int, size_x: int, dtype) -> str:
     return ome_meta
 
 
-def save_segmentation_masks(out_dir, img_name: str, cell, nuc, cell_b, nuc_b):
+def write_stack_to_file(out_dir, img_name: str, stack):
     dtype = np.uint32
-    ome_meta = fill_in_ome_meta_template(cell.shape[0], cell.shape[1], dtype)
+    ome_meta = fill_in_ome_meta_template(stack.shape[-2], stack.shape[-1], dtype)
     make_dir_if_not_exists(out_dir)
     out_path = path_to_str(out_dir / img_name)
+    stack_shape = stack.shape
+    new_stack_shape = [stack_shape[0], 1, stack_shape[1], stack_shape[2]]
     TW = tif.TiffWriter(out_path)
-
-    TW.write(cell.astype(dtype), contiguous=True, photometric="minisblack", description=ome_meta)
-    TW.write(nuc.astype(dtype), contiguous=True, photometric="minisblack", description=ome_meta)
-    TW.write(cell_b.astype(dtype), contiguous=True, photometric="minisblack", description=ome_meta)
-    TW.write(nuc_b.astype(dtype), contiguous=True, photometric="minisblack", description=ome_meta)
-
+    TW.write(stack.reshape(new_stack_shape).astype(dtype),
+             contiguous=True,
+             photometric="minisblack",
+             description=ome_meta
+             )
     TW.close()
