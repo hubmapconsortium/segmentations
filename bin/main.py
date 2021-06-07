@@ -1,13 +1,12 @@
 import argparse
 from pathlib import Path
-from math import ceil
 from typing import List, Dict, Tuple
-import re
 from datetime import datetime
 
 import numpy as np
 
-from utils import make_dir_if_not_exists, write_stack_to_file
+from utils import make_dir_if_not_exists, write_stack_to_file, path_to_str
+from img_proc.match_masks import get_matched_masks, get_mismatched_fraction
 from img_proc.mask_stitcher import stitch_mask_tiles
 from batch import BatchLoader
 
@@ -27,7 +26,15 @@ def save_masks(base_out_dir: Path, base_img_name: str, info: List[Dict[str, str]
                                channels["nucleus_boundary"]
                                ],
                               axis=0)
-        write_stack_to_file(out_dir, img_name, mask_stack)
+        matched_stack = get_matched_masks(mask_stack)
+        img_out_path = path_to_str(out_dir / img_name)
+        msfrac = get_mismatched_fraction(mask_stack[0, :, :],
+                                         mask_stack[1, :, :],
+                                         matched_stack[0, :, :],
+                                         matched_stack[1, :, :]
+                                         )
+
+        write_stack_to_file(img_out_path, matched_stack, round(msfrac, 3))
 
 
 def get_segmentation_method(method: str):
@@ -44,13 +51,14 @@ def get_segmentation_method(method: str):
     return segmenter
 
 
-def main(method: str, dataset_dir: Path, batch_size: int, use_tiles: False):
+def main(method: str, dataset_dir: Path, batch_size: int = 1, use_tiles=False):
     segm_channel_names = ("nucleus", "cell")
     out_base_img_name = "mask.ome.tiff"
     out_base_dir = Path("/output/")
 
     start = datetime.now()
     print('Started ' + str(start))
+    print('Batch size is:', batch_size)
 
     batcher = BatchLoader()
     batcher.batch_size = batch_size
@@ -59,7 +67,6 @@ def main(method: str, dataset_dir: Path, batch_size: int, use_tiles: False):
     batcher.init_img_batch_generator_per_dir()
 
     segmenter = get_segmentation_method(method)
-
     if use_tiles:
         while True:
             info_batch, tile_info, tile_batch = batcher.get_img_batch_tiled()
@@ -88,11 +95,12 @@ if __name__ == "__main__":
                         help="segmentation method cellpose or deepcell")
     parser.add_argument("--dataset_dir", type=Path,
                         help="path to directory with images")
-    parser.add_argument("--batch_size", default=10, type=int,
-                        help="number of images to process simultaneously")
+    # can't be used for celldive + deepcell as all slices have different shapes
+    # parser.add_argument("--batch_size", default=1, type=int,
+    #                     help="number of images to process simultaneously")
     # can't work yet because of mismatch in number of labels for cell and nuclei
     # parser.add_argument("--use_tiles", action='store_true',
     #                     help="split images into 1000x1000px tiles with 100px overlap and run segmentation")
     args = parser.parse_args()
 
-    main(args.method, args.dataset_dir, args.batch_size, args.use_tiles)
+    main(args.method, args.dataset_dir)#, args.batch_size, args.use_tiles)
