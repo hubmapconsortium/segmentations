@@ -26,8 +26,6 @@ RUN conda env update -f /tmp/environment.yml \
     && conda clean --index-cache --tarballs --yes \
     && rm /tmp/environment.yml
 
-COPY bin /opt
-
 # download cellpose models
 RUN mkdir -p /root/.cellpose/models \
     && cd /root/.cellpose/models \
@@ -56,7 +54,12 @@ RUN mkdir -p /root/.keras/models \
     && cd /root/.keras/models \
     && wget https://deepcell-data.s3-us-west-1.amazonaws.com/saved-models/MultiplexSegmentation-7.tar.gz \
     && tar -xvzf MultiplexSegmentation-7.tar.gz \
-    && rm MultiplexSegmentation-7.tar.gz
+    && mv MultiplexSegmentation-7.tar.gz MultiplexSegmentation.tgz
+# bug it tensorflow.keras doesn't read KERAS_HOME env var
+# so deepcell model will be redownloaded at each run
+
+COPY keras.json /root/.keras/.
+COPY bin /opt
 
 
 CMD ["/bin/bash"]
