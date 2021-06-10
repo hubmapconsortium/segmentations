@@ -78,7 +78,9 @@ def fill_in_ome_meta_template(size_y: int, size_x: int, dtype, match_fraction: f
               </StructuredAnnotations>
             </OME>
         """
-    ome_meta = template.format(size_y=size_y, size_x=size_x, dtype=np.dtype(dtype).name, match_fraction=match_fraction)
+    ome_meta = template.format(
+        size_y=size_y, size_x=size_x, dtype=np.dtype(dtype).name, match_fraction=match_fraction
+    )
     return ome_meta
 
 
@@ -88,8 +90,9 @@ def write_stack_to_file(out_path: str, stack, mismatch: float):
     stack_shape = stack.shape
     new_stack_shape = [stack_shape[0], 1, stack_shape[1], stack_shape[2]]
     with tif.TiffWriter(out_path) as TW:
-        TW.write(stack.reshape(new_stack_shape).astype(dtype),
-                 contiguous=True,
-                 photometric="minisblack",
-                 description=ome_meta
-                 )
+        TW.write(
+            stack.reshape(new_stack_shape).astype(dtype),
+            contiguous=True,
+            photometric="minisblack",
+            description=ome_meta,
+        )

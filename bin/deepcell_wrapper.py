@@ -1,12 +1,11 @@
-from typing import List, Dict, Tuple
 import gc
 import warnings
+from typing import Dict, List, Tuple
 
 import numpy as np
 import tensorflow as tf
 from deepcell.applications import MultiplexSegmentation
 from tensorflow.compat.v1 import ConfigProto, InteractiveSession
-
 from utils import *
 
 Image = np.ndarray
@@ -43,7 +42,7 @@ class DeepcellWrapper:
                 cell=cell_masks[i],
                 nucleus=nuc_masks[i],
                 cell_boundary=cell_boundaries[i],
-                nucleus_boundary=nuc_boundaries[i]
+                nucleus_boundary=nuc_boundaries[i],
             )
             segmentation_output.append(img_set)
         gc.collect()
@@ -58,7 +57,7 @@ class DeepcellWrapper:
     def _prepare_channels(self, img_batch: List[Dict[str, Image]]) -> Image:
         cell_channels = []
         for el in img_batch:
-            cell_ch = np.stack((el['nucleus'], el['cell']), axis=-1)
+            cell_ch = np.stack((el["nucleus"], el["cell"]), axis=-1)
             cell_ch = np.expand_dims(cell_ch, 0)
             cell_channels.append(cell_ch)
         return np.concatenate(cell_channels, axis=0)

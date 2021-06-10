@@ -1,8 +1,8 @@
-from typing import List, Dict, Tuple, Union, Any
 import gc
+from typing import Any, Dict, List, Tuple, Union
+
 import numpy as np
 from cellpose import models
-
 from utils import *
 
 Image = np.ndarray
@@ -33,7 +33,7 @@ class CellposeWrapper:
                 cell=cell_masks[i],
                 nucleus=nuc_masks[i],
                 cell_boundary=cell_boundaries[i],
-                nucleus_boundary=nuc_boundaries[i]
+                nucleus_boundary=nuc_boundaries[i],
             )
             segmentation_output.append(img_set)
         gc.collect()
@@ -51,7 +51,7 @@ class CellposeWrapper:
             channels=cell_channels,
             tile=True,
             tile_overlap=0.1,
-            batch_size=100
+            batch_size=100,
         )
         if not isinstance(cell_mask, list):
             return [cell_mask]
@@ -67,18 +67,20 @@ class CellposeWrapper:
             channels=nuc_channels,
             tile=True,
             tile_overlap=0.1,
-            batch_size=100
+            batch_size=100,
         )
         if not isinstance(nuc_mask, list):
             return [nuc_mask]
         else:
             return nuc_mask
 
-    def _prepare_channels(self, img_batch: List[Dict[str, Image]]) -> Tuple[List[Image], List[Image]]:
+    def _prepare_channels(
+        self, img_batch: List[Dict[str, Image]]
+    ) -> Tuple[List[Image], List[Image]]:
         cell_channels = []
         nuc_channels = []
         for el in img_batch:
-            cell_ch = np.stack((el['cell'], el['nucleus']), axis=0)
+            cell_ch = np.stack((el["cell"], el["nucleus"]), axis=0)
             cell_channels.append(cell_ch)
-            nuc_channels.append(el['nucleus'])
+            nuc_channels.append(el["nucleus"])
         return cell_channels, nuc_channels

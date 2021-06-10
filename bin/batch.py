@@ -1,13 +1,12 @@
-from math import ceil
-from pathlib import Path
-from typing import Tuple, Dict, List, Union, Iterator
 import re
 from itertools import chain
+from math import ceil
+from pathlib import Path
 from pprint import pprint
+from typing import Dict, Iterator, List, Tuple, Union
 
 import numpy as np
 import tifffile as tif
-
 from utils import alpha_num_order, get_img_listing, path_to_str
 
 Image = np.ndarray
@@ -17,7 +16,7 @@ class BatchLoader:
     def __init__(self):
         self.batch_size = 1
         self.gpu_ids = [0]
-        self.dataset_dir = Path('.')
+        self.dataset_dir = Path(".")
         self.segmentation_channel_names = ("nucleus", "cell")
         self._img_batch_gen = None
         self._img_batch_gen_per_gpu = None
@@ -33,7 +32,9 @@ class BatchLoader:
         img_dirs = self.collect_img_dirs(self.dataset_dir)
         generators_per_dir = []
         for img_dir, img_path in img_dirs.items():
-            img_info, img_sets = self.get_img_sets({img_dir: img_path}, self.segmentation_channel_names)
+            img_info, img_sets = self.get_img_sets(
+                {img_dir: img_path}, self.segmentation_channel_names
+            )
             this_dir_gen = self.create_img_batch_gen(img_info, img_sets, self.batch_size)
             generators_per_dir.append(this_dir_gen)
         self._img_batch_gen = chain(*generators_per_dir)  # chain generators into one
@@ -53,7 +54,9 @@ class BatchLoader:
         img_sets_split = list(self.split(img_sets, num_gpus))
         batch_gens_per_gpu = []
         for i in range(0, num_gpus):
-            batch_gen = self.create_img_batch_gen(img_info_split[i], img_sets_split[i], self.batch_size)
+            batch_gen = self.create_img_batch_gen(
+                img_info_split[i], img_sets_split[i], self.batch_size
+            )
             batch_gens_per_gpu.append(batch_gen)
             num_imgs_per_batch.append(len(img_sets_split[i]))
 
@@ -91,13 +94,15 @@ class BatchLoader:
     #     print("Average number of images per batch:", mean_num_imgs)
     #     self._img_batch_gen_per_gpu = generator_per_gpu
 
-    def get_batch_gen_for_gpu(self, gpu_id: int) -> Iterator[Tuple[List[Dict[str, str]], List[Dict[str, Image]]]]:
+    def get_batch_gen_for_gpu(
+        self, gpu_id: int
+    ) -> Iterator[Tuple[List[Dict[str, str]], List[Dict[str, Image]]]]:
         print("GPU", gpu_id, "processing files")
         return self._img_batch_gen_per_gpu[gpu_id]
 
     def split(self, a, n):
         k, m = divmod(len(a), n)
-        return (a[i * k + min(i, m):(i + 1) * k + min(i + 1, m)] for i in range(n))
+        return (a[i * k + min(i, m) : (i + 1) * k + min(i + 1, m)] for i in range(n))
 
     def get_img_batch(self):
         try:
@@ -106,21 +111,21 @@ class BatchLoader:
         except StopIteration:
             return None, None
 
-    def get_img_name_parts(self, img_name: str, segm_channel_names: Tuple[str]) -> Tuple[Union[str, None], Union[str, None]]:
+    def get_img_name_parts(
+        self, img_name: str, segm_channel_names: Tuple[str]
+    ) -> Tuple[Union[str, None], Union[str, None]]:
         img_prefix, identified_channel = None, None
         for segm_ch_name in segm_channel_names:
             channel_name_in_file = re.search(segm_ch_name, img_name, flags=re.IGNORECASE)
-            if channel_name_in_file is not None and channel_name_in_file != '':
+            if channel_name_in_file is not None and channel_name_in_file != "":
                 identified_channel = segm_ch_name
-                channel_pattern = '_?' + segm_ch_name + r'\.tif'
-                img_prefix = re.sub(channel_pattern, '', img_name, flags=re.IGNORECASE)
+                channel_pattern = "_?" + segm_ch_name + r"\.tif"
+                img_prefix = re.sub(channel_pattern, "", img_name, flags=re.IGNORECASE)
         return img_prefix, identified_channel
 
-    def check_all_channels_present(self,
-                                   img_dir: Path,
-                                   img_set: Dict[str, Path],
-                                   segm_channel_names: Tuple[str]
-                                   ) -> bool:
+    def check_all_channels_present(
+        self, img_dir: Path, img_set: Dict[str, Path], segm_channel_names: Tuple[str]
+    ) -> bool:
         img_set_ch_names = list(img_set.keys())
         found_channels = []
         missing_channels = []
@@ -130,17 +135,19 @@ class BatchLoader:
             else:
                 missing_channels.append(ch_name)
         if missing_channels != []:
-            msg = 'Missing channels: ' + str(missing_channels) + ' from ' + str(img_dir)
+            msg = "Missing channels: " + str(missing_channels) + " from " + str(img_dir)
             raise ValueError(msg)
         else:
             return True
 
-    def get_dir_listing(self, img_dir: Path, segm_channel_names: Tuple[str]) -> Dict[str, Dict[str, Path]]:
-        """ output {img_set: {channel_name: Image, ...}}
-            img_set is defined by img_prefix,
-            e.g. dataset_name_nucleus.tif
-            img_set = img_prefix = dataset_name
-            channel_name = nucleus
+    def get_dir_listing(
+        self, img_dir: Path, segm_channel_names: Tuple[str]
+    ) -> Dict[str, Dict[str, Path]]:
+        """output {img_set: {channel_name: Image, ...}}
+        img_set is defined by img_prefix,
+        e.g. dataset_name_nucleus.tif
+        img_set = img_prefix = dataset_name
+        channel_name = nucleus
         """
         listing = get_img_listing(img_dir)
         out_dict = dict()
@@ -156,9 +163,9 @@ class BatchLoader:
             self.check_all_channels_present(img_dir, out_dict[img_set], segm_channel_names)
         return out_dict
 
-    def get_img_sets(self, img_dirs: Dict[str, Path],
-                     segm_channel_names: Tuple[str]
-                     ) -> Tuple[List[Dict[str, str]], List[Dict[str, Path]]]:
+    def get_img_sets(
+        self, img_dirs: Dict[str, Path], segm_channel_names: Tuple[str]
+    ) -> Tuple[List[Dict[str, str]], List[Dict[str, Path]]]:
         all_img_sets = []
         all_img_info = []
         for dir_name, dir_path in img_dirs.items():
@@ -178,14 +185,12 @@ class BatchLoader:
             img_dirs_dict[img_dir.name] = img_dir
         return img_dirs_dict
 
-    def create_img_batch_gen(self,
-                             img_info: List[Dict[str, str]],
-                             img_sets: List[Dict[str, Path]],
-                             batch_size=10
-                             ) -> Iterator[Tuple[List[Dict[str, str]], List[Dict[str, Image]]]]:
-        """ output
-           [ {dir_name: img_set_name} ],
-           [ {channel : Image} ]
+    def create_img_batch_gen(
+        self, img_info: List[Dict[str, str]], img_sets: List[Dict[str, Path]], batch_size=10
+    ) -> Iterator[Tuple[List[Dict[str, str]], List[Dict[str, Image]]]]:
+        """output
+        [ {dir_name: img_set_name} ],
+        [ {channel : Image} ]
         """
         num_sets = len(img_sets)
         num_batches = ceil(num_sets / batch_size)
