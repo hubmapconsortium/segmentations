@@ -1,21 +1,45 @@
 #### Segmentation wrappers around cellpose and deepcell
 
-Usage `python bin/main.py --dataset_dir /path/to/dataset/ --method cellpose (or deepcell)  --batch_size 10`
+### Command line argument
 
-Expected dataset dir structure:
+**`--method`**    segmentation method `cellpose` or `deepcell`     
+**`--dataset_dir`**     path to directory with images                
+**`--gpus`**    comma separated ids of gpus to use, e.g. `"0,1,2"`, default `"all"`
+
+### Usage 
+`python main.py --dataset_dir /path/to/dataset/ --method deepcell (or cellpose) --gpus "0,1"`
+
+### Expected **`dataset_dir`** structure:
 ```
 dataset_dir
 |-- data_dir1
-|    |-- prefix_1_nucleus.tif
-|    `-- prefix_1_cell.tif
+|    |-- prefix1_nucleus.tif
+|    `-- prefix1_cell.tif
 |
 |-- data_dir2
-|    |-- prefix_2_nucleus.tif  
-|    `-- prefix_2_cell.tif
+|    |-- prefix2_nucleus.tif  
+|    `-- prefix2_cell.tif
 |
 ...
 | 
 `-- data_dirN
-    |-- prefix_N_nucleus.tif  
-    `-- prefix_N_cell.tif      
+     |-- prefixN_nucleus.tif  
+     `-- prefixN_cell.tif      
 ```
+
+### Output structure
+```
+dataset_dir
+|-- data_dir1
+|    `-- prefix1_mask.ome.tiff
+|    
+|-- data_dir2
+|    `-- prefix2_mask.ome.tiff 
+|    
+...
+| 
+`-- data_dirN
+     `-- prefixN_mask.ome.tiff     
+```
+
+

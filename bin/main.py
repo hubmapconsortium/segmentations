@@ -2,91 +2,106 @@ import argparse
 from pathlib import Path
 from typing import List, Dict, Tuple
 from datetime import datetime
+from subprocess import Popen
+import os
+import os.path as osp
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 import numpy as np
+from tensorflow.python.client import device_lib
 
-from utils import make_dir_if_not_exists, write_stack_to_file, path_to_str
-from img_proc.match_masks import get_matched_masks, get_mismatched_fraction
-from img_proc.mask_stitcher import stitch_mask_tiles
 from batch import BatchLoader
+from utils import path_to_str
+
 
 Image = np.ndarray
 
 
-def save_masks(base_out_dir: Path, base_img_name: str, info: List[Dict[str, str]], imgs: List[Dict[str, Image]]):
-    for i, el in enumerate(info):
-        dir_name, img_set = list(el.items())[0]
-        out_dir = base_out_dir / dir_name
-        make_dir_if_not_exists(out_dir)
-        img_name = img_set + '_' + base_img_name
-        channels = imgs[i]
-        mask_stack = np.stack([channels["cell"],
-                               channels["nucleus"],
-                               channels["cell_boundary"],
-                               channels["nucleus_boundary"]
-                               ],
-                              axis=0)
-        matched_stack = get_matched_masks(mask_stack)
-        img_out_path = path_to_str(out_dir / img_name)
-        msfrac = get_mismatched_fraction(mask_stack[0, :, :],
-                                         mask_stack[1, :, :],
-                                         matched_stack[0, :, :],
-                                         matched_stack[1, :, :]
-                                         )
-
-        write_stack_to_file(img_out_path, matched_stack, round(msfrac, 3))
+def get_available_gpus() -> List[int]:
+    # device_lib.list_local_devices() lists devices like this
+    # [ PhysicalDevice(name='/physical_device:GPU:0', device_type='GPU'),
+    #   PhysicalDevice(name='/physical_device:GPU:1', device_type='GPU')]
+    def extract_gpu_id(gpu_name):
+        return int(gpu_name.split(':')[-1])
+    local_devices = device_lib.list_local_devices()
+    gpu_ids = []
+    for device in local_devices:
+        if device.device_type == 'GPU':
+            gpu_ids.append(extract_gpu_id(device.name))
+    if gpu_ids == []:
+        raise ValueError("No GPUs were found")
+    return gpu_ids
 
 
-def get_segmentation_method(method: str):
-    if method == 'cellpose':
-        from cellpose_wrapper2 import CellposeWrapper
-        segmenter = CellposeWrapper()
-    elif method == 'deepcell':
-        from deepcell_wrapper2 import DeepcellWrapper
-        segmenter = DeepcellWrapper()
-    else:
-        msg = 'Incorrect segmentation method ' + method
-        raise ValueError(msg)
-    print('Using segmentation method ' + method)
-    return segmenter
+def get_allowed_gpu_ids(gpus: str) -> List[int]:
+    found_gpus = get_available_gpus()
+    print("Found GPU devices with ids:", found_gpus)
+    if gpus == "":
+        raise ValueError("No GPUs specified")
+    elif gpus != "all":
+        gpu_ids = []
+        allowed_gpus = [int(_id) for _id in gpus.split(',') if _id != '']
+        for _id in found_gpus:
+            if _id in allowed_gpus:
+                gpu_ids.append(_id)
+        if gpu_ids == []:
+            msg = "Specified GPU ids: {allowed} do not match with found GPU ids: {found}"
+            raise ValueError(msg.format(allowed=str(allowed_gpus), found=str(found_gpus)))
+        return gpu_ids
 
 
-def main(method: str, dataset_dir: Path, batch_size: int = 1, use_tiles=False):
-    segm_channel_names = ("nucleus", "cell")
-    out_base_img_name = "mask.ome.tiff"
-    out_base_dir = Path("/output/")
-
-    start = datetime.now()
-    print('Started ' + str(start))
-    print('Batch size is:', batch_size)
-
+def remove_gpus_if_more_than_imgs(dataset_dir: Path, gpu_ids: List[int], segm_channels: Tuple[str]):
     batcher = BatchLoader()
-    batcher.batch_size = batch_size
     batcher.dataset_dir = dataset_dir
-    batcher.segmentation_channel_names = segm_channel_names
-    batcher.init_img_batch_generator_per_dir()
+    batcher.segmentation_channel_names = segm_channels
+    num_imgs = batcher.get_num_of_imgs()
 
-    segmenter = get_segmentation_method(method)
-    if use_tiles:
-        while True:
-            info_batch, tile_info, tile_batch = batcher.get_img_batch_tiled()
-            if info_batch is None and tile_batch is None:
-                break
-            segmented_tiles = segmenter.segment_tiled(tile_batch)
-            for img_set_id, tiles in enumerate(segmented_tiles):
-                stitched_mask = stitch_mask_tiles(tiles, tile_info[img_set_id])
-                save_masks(out_base_dir, out_base_img_name, info_batch, [stitched_mask])
-    else:
-        while True:
-            info_batch, img_batch = batcher.get_img_batch()
-            if info_batch is None and img_batch is None:
-                break
-            segmented_batch = segmenter.segment(img_batch)
-            save_masks(out_base_dir, out_base_img_name, info_batch, segmented_batch)
+    updated_gpu_ids = gpu_ids
+    if num_imgs > len(gpu_ids):
+        updated_gpu_ids = gpu_ids[:num_imgs]
+    return updated_gpu_ids
 
-    fin = datetime.now()
-    print('Finished ' + str(fin))
-    print('Time elapsed ' + str(fin - start))
+
+def run_segmentation(method: str, dataset_dir: Path, gpu_ids: List[int], segm_channels: Tuple[str]):
+    self_location = osp.realpath(osp.join(os.getcwd(), osp.dirname(__file__)))
+    script_path = osp.join(self_location, "segment.py")
+    cmd_template = ('CUDA_VISIBLE_DEVICES={gpu_id} ' +
+                    ' python "{script_path}" ' +
+                    ' --method {method} ' +
+                    ' --dataset_dir "{dataset_dir}" ' +
+                    ' --gpu_id {gpu_id} ' +
+                    ' --gpus {gpus} ' +
+                    ' --segm_channels "{segm_channels}" '
+                    )
+
+    processes = []
+    for gpu_id in gpu_ids:
+        cmd = cmd_template.format(gpu_id=gpu_id,
+                                  script_path=script_path,
+                                  method=method,
+                                  gpus=",".join(str(i) for i in gpu_ids),
+                                  dataset_dir=path_to_str(dataset_dir),
+                                  segm_channels=",".join(segm_channels)
+                                  )
+        processes.append(Popen(cmd, shell=True))
+    for proc in processes:
+        proc.wait()
+
+
+def main(method: str, dataset_dir: Path, gpus: str):
+    start = datetime.now()
+    # batch_size can't be larger for celldive + deepcell because all images have different shapes
+    batch_size = 1
+    segm_channels = ("nucleus", "cell")
+    print("Started " + str(start))
+    print("Batch size is:", batch_size)
+    gpus = gpus.lower()
+    method = method.lower()
+
+    gpu_ids = get_allowed_gpu_ids(gpus)
+    gpu_ids = remove_gpus_if_more_than_imgs(dataset_dir, gpu_ids, segm_channels)
+    run_segmentation(method, dataset_dir, gpu_ids, segm_channels)
 
 
 if __name__ == "__main__":
@@ -95,12 +110,8 @@ if __name__ == "__main__":
                         help="segmentation method cellpose or deepcell")
     parser.add_argument("--dataset_dir", type=Path,
                         help="path to directory with images")
-    # can't be used for celldive + deepcell as all slices have different shapes
-    # parser.add_argument("--batch_size", default=1, type=int,
-    #                     help="number of images to process simultaneously")
-    # can't work yet because of mismatch in number of labels for cell and nuclei
-    # parser.add_argument("--use_tiles", action='store_true',
-    #                     help="split images into 1000x1000px tiles with 100px overlap and run segmentation")
+    parser.add_argument("--gpus", type=str, default="all",
+                        help="comma separated ids of gpus to use, e.g. 0,1,2")
     args = parser.parse_args()
 
-    main(args.method, args.dataset_dir)#, args.batch_size, args.use_tiles)
+    main(args.method, args.dataset_dir, args.gpus)

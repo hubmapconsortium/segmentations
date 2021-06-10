@@ -1,6 +1,4 @@
-import os
 import re
-from os.path import join
 from pathlib import Path
 from typing import List
 
@@ -53,7 +51,7 @@ def get_boundary(masks: List[Image]) -> List[Image]:
     return boundaries
 
 
-def fill_in_ome_meta_template(size_y: int, size_x: int, dtype, mismatch:float) -> str:
+def fill_in_ome_meta_template(size_y: int, size_x: int, dtype, match_fraction: float) -> str:
     template = """<?xml version="1.0" encoding="utf-8"?>
             <OME xmlns="http://www.openmicroscopy.org/Schemas/OME/2016-06" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.openmicroscopy.org/Schemas/OME/2016-06 http://www.openmicroscopy.org/Schemas/OME/2016-06/ome.xsd">
               <Image ID="Image:0" Name="mask.ome.tiff">
@@ -72,15 +70,15 @@ def fill_in_ome_meta_template(size_y: int, size_x: int, dtype, mismatch:float) -
                 <XMLAnnotation ID="Annotation:0">
                     <Value>
                         <OriginalMetadata>
-                            <Key>CompartmentsMismatchedFraction</Key>
-                            <Value>{mismatch}</Value>
+                            <Key>FractionOfMatchedCellsAndNuclei</Key>
+                            <Value>{match_fraction}</Value>
                         </OriginalMetadata>
                     </Value>
                 </XMLAnnotation>
               </StructuredAnnotations>
             </OME>
         """
-    ome_meta = template.format(size_y=size_y, size_x=size_x, dtype=np.dtype(dtype).name, mismatch=mismatch)
+    ome_meta = template.format(size_y=size_y, size_x=size_x, dtype=np.dtype(dtype).name, match_fraction=match_fraction)
     return ome_meta
 
 
@@ -89,10 +87,9 @@ def write_stack_to_file(out_path: str, stack, mismatch: float):
     ome_meta = fill_in_ome_meta_template(stack.shape[-2], stack.shape[-1], dtype, mismatch)
     stack_shape = stack.shape
     new_stack_shape = [stack_shape[0], 1, stack_shape[1], stack_shape[2]]
-    TW = tif.TiffWriter(out_path)
-    TW.write(stack.reshape(new_stack_shape).astype(dtype),
-             contiguous=True,
-             photometric="minisblack",
-             description=ome_meta
-             )
-    TW.close()
+    with tif.TiffWriter(out_path) as TW:
+        TW.write(stack.reshape(new_stack_shape).astype(dtype),
+                 contiguous=True,
+                 photometric="minisblack",
+                 description=ome_meta
+                 )

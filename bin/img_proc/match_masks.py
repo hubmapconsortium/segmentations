@@ -1,9 +1,12 @@
+from typing import Tuple
 import numpy as np
 from scipy.sparse import csr_matrix
 from skimage.segmentation import find_boundaries
 
+Image = np.ndarray
 
-def get_matched_cells(arr1, arr2, mismatch_area):
+
+def get_matched_cells(arr1: Image, arr2: Image, mismatch_area: int):
     a = set((tuple(i) for i in arr1))
     b = set((tuple(i) for i in arr2))
     mismatch_pixel = list(b - a)
@@ -11,7 +14,6 @@ def get_matched_cells(arr1, arr2, mismatch_area):
         if len(mismatch_pixel) != 0:
             return np.array(list(a)), np.array(list(a & b))
         else:
-            # diff = np.array(list(a - b))
             return np.array(list(a)), np.array(list(b))
     else:
         return False, False
@@ -41,13 +43,13 @@ def get_indexed_mask(mask, boundary):
     return boundary
 
 
-def get_boundary(mask):
+def get_boundary(mask: Image):
     mask_boundary = find_boundaries(mask)
     mask_boundary_indexed = get_indexed_mask(mask, mask_boundary)
     return mask_boundary_indexed
 
 
-def get_mask(cell_list, shape):
+def get_mask(cell_list, shape: Tuple[int]):
     mask = np.zeros(shape)
     for cell_num in range(len(cell_list)):
         mask[tuple(cell_list[cell_num].T)] = cell_num + 1
@@ -55,16 +57,44 @@ def get_mask(cell_list, shape):
     return mask
 
 
-def get_cell_num(mask):
+def get_cell_num(mask: Image):
     return len(np.unique(mask))
 
 
-def get_matched_masks(mask_stack):
+def get_mismatched_fraction(whole_cell_mask: Image,
+                            nuclear_mask: Image,
+                            cell_matched_mask: Image,
+                            nuclear_matched_mask: Image) -> float:
+    whole_cell_mask_binary = np.sign(whole_cell_mask)
+    nuclear_mask_binary = np.sign(nuclear_mask)
+    cell_matched_mask_binary = np.sign(cell_matched_mask)
+    nuclear_matched_mask_binary = np.sign(nuclear_matched_mask)
+    total_area = np.sum(np.sign(whole_cell_mask_binary + nuclear_mask_binary))
+    mismatched_area = np.sum(np.sign(
+        (nuclear_mask_binary - nuclear_matched_mask_binary) + (whole_cell_mask_binary - cell_matched_mask_binary)))
+    mismatched_fraction = mismatched_area / total_area
+    return mismatched_fraction
+
+
+def get_fraction_matched_cells(whole_cell_mask: Image,
+                               nuclear_mask: Image,
+                               cell_matched_mask: Image,
+                               nuclear_matched_mask: Image) -> float:
+    matched_cell_num = len(np.unique(cell_matched_mask)) - 1
+    total_cell_num = len(np.unique(whole_cell_mask)) - 1
+    total_nuclei_num = len(np.unique(nuclear_mask)) - 1
+    mismatched_cell_num = total_cell_num - matched_cell_num
+    mismatched_nuclei_num = total_nuclei_num - matched_cell_num
+    fraction_matched_cells = matched_cell_num / (mismatched_cell_num + mismatched_nuclei_num + matched_cell_num)
+    return fraction_matched_cells
+
+
+def get_matched_masks(mask_stack: Image) -> Tuple[Image, float]:
     """
     returns masks with matched cells and nuclei
     """
     matched_mask_stack = mask_stack.copy()
-    whole_cell_mask = matched_mask_stack[0, :, :]  # todo: upgrade to multiple c channels
+    whole_cell_mask = matched_mask_stack[0, :, :]
     nuclear_mask = matched_mask_stack[1, :, :]
 
     cell_coords = get_indices_sparse(whole_cell_mask)[1:]
@@ -88,7 +118,7 @@ def get_matched_masks(mask_stack):
             for j in nuclear_search_num:
                 if j != 0:
                     if (j - 1 not in nucleus_matched_index_list) and (i not in cell_matched_index_list):
-                        whole_cell, nucleus = get_matched_cells(cell_coords[i], nucleus_coords[j - 1], mismatch_area=20)
+                        whole_cell, nucleus = get_matched_cells(cell_coords[i], nucleus_coords[j - 1], mismatch_area=50)
                         if type(whole_cell) != bool:
                             cell_matched_list.append(whole_cell)
                             nucleus_matched_list.append(nucleus)
@@ -104,25 +134,14 @@ def get_matched_masks(mask_stack):
     cell_membrane_mask = get_boundary(cell_matched_mask)
     nuclear_membrane_mask = get_boundary(nuclear_matched_mask)
 
+    # calculate fraction of mismatch
+    fraction_matched_cells = get_fraction_matched_cells(whole_cell_mask,
+                                                        nuclear_mask,
+                                                        cell_matched_mask,
+                                                        nuclear_matched_mask)
+
     matched_mask_stack[0, :, :] = cell_matched_mask
     matched_mask_stack[1, :, :] = nuclear_matched_mask
     matched_mask_stack[2, :, :] = cell_membrane_mask
     matched_mask_stack[3, :, :] = nuclear_membrane_mask
-    return matched_mask_stack
-
-
-def get_mismatched_fraction(whole_cell_mask, nuclear_mask, cell_matched_mask, nuclear_matched_mask):
-    whole_cell_mask_binary = np.sign(whole_cell_mask)
-    nuclear_mask_binary = np.sign(nuclear_mask)
-    cell_matched_mask_binary = np.sign(cell_matched_mask)
-    nuclear_matched_mask_binary = np.sign(nuclear_matched_mask)
-    total_area = np.sum(np.sign(whole_cell_mask_binary + nuclear_mask_binary))
-    mismatched_area = np.sum(np.sign((nuclear_mask_binary - nuclear_matched_mask_binary) + (whole_cell_mask_binary - cell_matched_mask_binary)))
-    mismatched_fraction = mismatched_area / total_area
-    return mismatched_fraction
-
-
-def save_mismatch_fraction(out_path, whole_cell_mask, nuclear_mask, cell_matched_mask, nuclear_matched_mask):
-    mismatched_fraction = get_mismatched_fraction(whole_cell_mask, nuclear_mask, cell_matched_mask, nuclear_matched_mask)
-    np.savetxt(out_path, [mismatched_fraction])
-
+    return matched_mask_stack, fraction_matched_cells
