@@ -22,13 +22,13 @@ class BatchLoader:
         self._img_batch_gen_per_gpu = None
 
     def init_img_batch_generator_cross_dir(self):
-        """ Will produce batches across img directories """
+        """Will produce batches across img directories"""
         img_dirs = self.collect_img_dirs(self.dataset_dir)
         img_info, img_sets = self.get_img_sets(img_dirs, self.segmentation_channel_names)
         self._img_batch_gen = self.create_img_batch_gen(img_info, img_sets, self.batch_size)
 
     def init_img_batch_generator_per_dir(self):
-        """ Will produce batches only inside one img directory at a time """
+        """Will produce batches only inside one img directory at a time"""
         img_dirs = self.collect_img_dirs(self.dataset_dir)
         generators_per_dir = []
         for img_dir, img_path in img_dirs.items():
