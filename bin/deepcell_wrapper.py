@@ -1,25 +1,28 @@
 import gc
 import warnings
-from typing import Dict, List, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 import tensorflow as tf
 from deepcell.applications import MultiplexSegmentation
 from tensorflow.compat.v1 import ConfigProto, InteractiveSession
-
+from tensorflow.keras.models import load_model
 from utils import *
 
 Image = np.ndarray
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
+default_model_path = Path("/.keras/models/MultiplexSegmentation")
+
 
 class DeepcellWrapper:
-    def __init__(self):
+    def __init__(self, model_path: Optional[Path] = default_model_path):
         self._session = None
-        self._init_tf()
-        self._model = MultiplexSegmentation()
+        self._keras_model = None
+        self._init_tf(model_path)
+        self._model = MultiplexSegmentation(model=self._keras_model)
 
-    def _init_tf(self):
+    def _init_tf(self, model_path: Optional[Path]):
         # setup tensorflow
         config = ConfigProto(log_device_placement=True)
         config.gpu_options.allow_growth = True
@@ -27,6 +30,9 @@ class DeepcellWrapper:
         self._session = InteractiveSession(config=config)
         config.gpu_options.per_process_gpu_memory_fraction = 0.9
         tf.compat.v1.keras.backend.set_session(tf.compat.v1.Session(config=config))
+        # load pre-downloaded keras model
+        if model_path is not None:
+            self._keras_model = load_model(model_path)
 
     def segment(self, img_batch: List[Dict[str, Image]]) -> List[Dict[str, Image]]:
         cell_channels = self._prepare_channels(img_batch)

@@ -27,8 +27,8 @@ RUN conda env update -f /tmp/environment.yml \
     && rm /tmp/environment.yml
 
 # download cellpose models
-RUN mkdir -p /root/.cellpose/models \
-    && cd /root/.cellpose/models \
+RUN mkdir -p /output/.cellpose/models \
+    && cd /output/.cellpose/models \
     && wget http://www.cellpose.org/models/nuclei_0 \
     && wget http://www.cellpose.org/models/nuclei_1 \
     && wget http://www.cellpose.org/models/nuclei_2 \
