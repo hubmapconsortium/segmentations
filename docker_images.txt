@@ -1,1 +1,2 @@
 hubmap/segmentations	Dockerfile
+hubmap/segmentations-cuda-10-2  Dockerfile_cuda
