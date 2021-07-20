@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Tuple, Union
 
 import numpy as np
 from cellpose import models
+
 from utils import *
 
 Image = np.ndarray

@@ -6,6 +6,7 @@ import numpy as np
 import tensorflow as tf
 from deepcell.applications import MultiplexSegmentation
 from tensorflow.compat.v1 import ConfigProto, InteractiveSession
+
 from utils import *
 
 Image = np.ndarray
