@@ -1,4 +1,5 @@
 import gc
+from os import environ
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
@@ -15,6 +16,7 @@ default_model_path = Path("/opt")
 
 class CellposeWrapper:
     def __init__(self, model_path: Optional[Path] = default_model_path):
+        environ["NUMBA_CACHE_DIR"] = environ["TMPDIR"]
         with home_dir_env_override(model_path):
             from cellpose import models
 
