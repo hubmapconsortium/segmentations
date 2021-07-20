@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 import numpy as np
-from cellpose import models
 
 from utils import *
 
@@ -16,8 +15,10 @@ default_model_path = Path("/opt")
 
 class CellposeWrapper:
     def __init__(self, model_path: Optional[Path] = default_model_path):
-        self._gpu = models.use_gpu()
         with home_dir_env_override(model_path):
+            from cellpose import models
+
+            self._gpu = models.use_gpu()
             self._model_cyto = models.Cellpose(gpu=self._gpu, model_type="cyto")
             self._model_nuc = models.Cellpose(gpu=self._gpu, model_type="nuclei")
         self._cell_size = None
