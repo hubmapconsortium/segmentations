@@ -2,7 +2,7 @@ import re
 from contextlib import contextmanager
 from os import environ, fspath
 from pathlib import Path
-from typing import List, Union
+from typing import List, Optional, Union
 
 import numpy as np
 import tifffile as tif
@@ -12,9 +12,10 @@ Image = np.ndarray
 
 
 @contextmanager
-def home_dir_env_override(new_home_dir: Union[Path, str]):
+def home_dir_env_override(new_home_dir: Optional[Union[Path, str]]):
     old_home: str = environ["HOME"]
-    environ["HOME"] = fspath(new_home_dir)
+    if new_home_dir is not None:
+        environ["HOME"] = fspath(new_home_dir)
     yield
     environ["HOME"] = old_home
 
