@@ -7,6 +7,7 @@ from typing import Dict, Iterator, List, Tuple, Union
 
 import numpy as np
 import tifffile as tif
+
 from utils import alpha_num_order, get_img_listing, path_to_str
 
 Image = np.ndarray

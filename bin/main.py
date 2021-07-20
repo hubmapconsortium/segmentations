@@ -9,8 +9,9 @@ from typing import Dict, List, Tuple
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 import numpy as np
-from batch import BatchLoader
 from tensorflow.python.client import device_lib
+
+from batch import BatchLoader
 from utils import path_to_str
 
 Image = np.ndarray
