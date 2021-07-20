@@ -1,12 +1,22 @@
 import re
+from contextlib import contextmanager
+from os import environ, fspath
 from pathlib import Path
-from typing import List
+from typing import List, Union
 
 import numpy as np
 import tifffile as tif
 from skimage.segmentation import find_boundaries
 
 Image = np.ndarray
+
+
+@contextmanager
+def home_dir_env_override(new_home_dir: Union[Path, str]):
+    old_home: str = environ["HOME"]
+    environ["HOME"] = fspath(new_home_dir)
+    yield
+    environ["HOME"] = old_home
 
 
 def alpha_num_order(string: str) -> str:
@@ -18,8 +28,8 @@ def alpha_num_order(string: str) -> str:
     )
 
 
-def path_to_str(path: Path):
-    return str(path.absolute().as_posix())
+def path_to_str(path: Path) -> str:
+    return fspath(path.absolute().as_posix())
 
 
 def make_dir_if_not_exists(dir_path: Path):
