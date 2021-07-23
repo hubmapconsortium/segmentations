@@ -9,8 +9,9 @@ from typing import Dict, List, Tuple
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 
 import numpy as np
-from batch import BatchLoader
 from tensorflow.python.client import device_lib
+
+from batch import BatchLoader
 from utils import path_to_str
 
 Image = np.ndarray
@@ -38,16 +39,15 @@ def get_allowed_gpu_ids(gpus: str) -> List[int]:
     print("Found GPU devices with ids:", found_gpus)
     if gpus == "":
         raise ValueError("No GPUs specified")
-    elif gpus != "all":
-        gpu_ids = []
-        allowed_gpus = [int(_id) for _id in gpus.split(",") if _id != ""]
-        for _id in found_gpus:
-            if _id in allowed_gpus:
-                gpu_ids.append(_id)
-        if gpu_ids == []:
+    elif gpus == "all":
+        return found_gpus
+    else:
+        allowed_gpus = {int(_id) for _id in gpus.split(",") if _id != ""}
+        gpu_ids = set(found_gpus) & allowed_gpus
+        if not gpu_ids:
             msg = "Specified GPU ids: {allowed} do not match with found GPU ids: {found}"
             raise ValueError(msg.format(allowed=str(allowed_gpus), found=str(found_gpus)))
-        return gpu_ids
+        return sorted(gpu_ids)
 
 
 def remove_gpus_if_more_than_imgs(
