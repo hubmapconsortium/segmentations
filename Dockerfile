@@ -50,15 +50,16 @@ RUN mkdir -p /root/.cellpose/models \
     && wget https://www.cellpose.org/models/nucleitorch_3 \
     && wget https://www.cellpose.org/models/size_nucleitorch_0.npy
 
-RUN mkdir -p /root/.keras/models \
-    && cd /root/.keras/models \
+RUN mkdir -p /.keras/models \
+    && cd /.keras/models \
     && wget https://deepcell-data.s3-us-west-1.amazonaws.com/saved-models/MultiplexSegmentation-7.tar.gz \
     && tar -xvzf MultiplexSegmentation-7.tar.gz \
-    && mv MultiplexSegmentation-7.tar.gz MultiplexSegmentation.tgz
+    && rm MultiplexSegmentation-7.tar.gz \
+    && ln -s /.keras /root \
 # bug it tensorflow.keras doesn't read KERAS_HOME env var
 # so deepcell model will be redownloaded at each run
 
-COPY keras.json /root/.keras/.
+COPY keras.json /.keras/.
 COPY bin /opt
 
 
