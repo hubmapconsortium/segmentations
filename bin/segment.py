@@ -32,7 +32,7 @@ def save_masks(
             ],
             axis=0,
         )
-        matched_stack, fraction_matched = get_matched_masks(mask_stack)
+        matched_stack, fraction_matched = get_matched_masks(mask_stack, True)
         img_out_path = path_to_str(out_dir / img_name)
         write_stack_to_file(img_out_path, matched_stack, round(fraction_matched, 3))
 

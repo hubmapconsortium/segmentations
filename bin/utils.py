@@ -45,7 +45,7 @@ def get_indexed_mask(mask, boundary):
 def get_boundary(masks: List[Image]) -> List[Image]:
     boundaries = []
     for mask in masks:
-        mask_boundary = find_boundaries(mask)
+        mask_boundary = find_boundaries(mask, mode="inner")
         mask_boundary_indexed = get_indexed_mask(mask, mask_boundary)
         boundaries.append(mask_boundary_indexed)
     return boundaries
