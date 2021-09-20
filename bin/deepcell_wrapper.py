@@ -7,6 +7,7 @@ import tensorflow as tf
 from deepcell.applications import MultiplexSegmentation
 from tensorflow.compat.v1 import ConfigProto, InteractiveSession
 from tensorflow.keras.models import load_model
+
 from utils import *
 
 Image = np.ndarray
