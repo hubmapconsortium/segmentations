@@ -24,6 +24,7 @@ COPY environment.yml /tmp/
 RUN conda env update -f /tmp/environment.yml \
     && echo "source activate base" > ~/.bashrc \
     && conda clean --index-cache --tarballs --yes \
+    && pip cache purge \
     && rm /tmp/environment.yml
 
 # download cellpose models
@@ -51,7 +52,6 @@ RUN mkdir -p /.cellpose/models \
     && wget https://www.cellpose.org/models/nucleitorch_3 \
     && wget https://www.cellpose.org/models/size_nucleitorch_0.npy
 
-# download deepcell models
 RUN mkdir -p /.keras/models \
     && cd /.keras/models \
     && wget https://deepcell-data.s3-us-west-1.amazonaws.com/saved-models/MultiplexSegmentation-7.tar.gz \
