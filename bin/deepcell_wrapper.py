@@ -4,7 +4,7 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 import tensorflow as tf
-from deepcell.applications import MultiplexSegmentation
+from deepcell.applications import Mesmer
 from tensorflow.compat.v1 import ConfigProto, InteractiveSession
 from tensorflow.keras.models import load_model
 
@@ -13,7 +13,7 @@ from utils import *
 Image = np.ndarray
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-default_model_path = Path("/.keras/models/MultiplexSegmentation")
+default_model_path = Path("/opt/.keras/models/MultiplexSegmentation")
 
 
 class DeepcellWrapper:
@@ -21,7 +21,7 @@ class DeepcellWrapper:
         self._session = None
         self._keras_model = None
         self._init_tf(model_path)
-        self._model = MultiplexSegmentation(model=self._keras_model)
+        self._model = Mesmer(model=self._keras_model)
 
     def _init_tf(self, model_path: Optional[Path]):
         # setup tensorflow

@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 from typing import Dict, List, Tuple
+from datetime import datetime
 
 import numpy as np
 
@@ -32,7 +33,12 @@ def save_masks(
             ],
             axis=0,
         )
+        st = datetime.now()
+        print("Started matching cell and nuclei " + str(st))
         matched_stack, fraction_matched = get_matched_masks(mask_stack, True)
+        fin = datetime.now()
+        print("Finished matching " + fin)
+        print("Time elapsed " + str(fin - st))
         img_out_path = path_to_str(out_dir / img_name)
         write_stack_to_file(img_out_path, matched_stack, round(fraction_matched, 3))
 
