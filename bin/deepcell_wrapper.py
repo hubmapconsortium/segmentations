@@ -13,7 +13,7 @@ from utils import *
 Image = np.ndarray
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-default_model_path = Path("/.keras/models/MultiplexSegmentation")
+default_model_path = Path("/opt/.keras/models/MultiplexSegmentation")
 
 
 class DeepcellWrapper:
