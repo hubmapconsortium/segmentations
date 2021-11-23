@@ -99,7 +99,7 @@ def main(method: str, dataset_dir: Path, gpus: str):
     # batch_size can't be larger for celldive + deepcell because all images have different shapes
     batch_size = 1
     segm_channels = ("nucleus", "cell")
-    print("Started segmentation pipeline" + str(start))
+    print("Started segmentation pipeline", str(start))
     print("Batch size is:", batch_size)
     gpus = gpus.lower()
     method = method.lower()
@@ -108,8 +108,8 @@ def main(method: str, dataset_dir: Path, gpus: str):
     gpu_ids = remove_gpus_if_more_than_imgs(dataset_dir, gpu_ids, segm_channels)
     run_segmentation(method, dataset_dir, gpu_ids, segm_channels)
     finish = datetime.now()
-    print("Finished segmentation pipeline" + str(finish))
-    print("Time elapsed " + str(finish - start))
+    print("Finished segmentation pipeline", str(finish))
+    print("Time elapsed ", str(finish - start))
 
 
 if __name__ == "__main__":
