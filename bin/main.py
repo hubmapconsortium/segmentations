@@ -3,7 +3,7 @@ import os
 import os.path as osp
 from datetime import datetime
 from pathlib import Path
-from subprocess import Popen
+from subprocess import Popen, PIPE
 from typing import Dict, List, Tuple
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
@@ -89,9 +89,12 @@ def run_segmentation(
             dataset_dir=path_to_str(dataset_dir),
             segm_channels=",".join(segm_channels),
         )
-        processes.append(Popen(cmd, shell=True))
+        processes.append(Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE, universal_newlines=True))
     for proc in processes:
-        proc.wait()
+        returncode = proc.wait()
+        if returncode != 0:
+            msg = "There was an error in the subprocess:\n " + proc.stderr.read()
+            raise ChildProcessError(msg)
 
 
 def main(method: str, dataset_dir: Path, gpus: str):
