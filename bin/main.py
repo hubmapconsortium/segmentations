@@ -3,7 +3,7 @@ import os
 import os.path as osp
 from datetime import datetime
 from pathlib import Path
-from subprocess import Popen
+from subprocess import Popen, PIPE
 from typing import Dict, List, Tuple
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
@@ -89,9 +89,12 @@ def run_segmentation(
             dataset_dir=path_to_str(dataset_dir),
             segm_channels=",".join(segm_channels),
         )
-        processes.append(Popen(cmd, shell=True))
+        processes.append(Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE, universal_newlines=True))
     for proc in processes:
-        proc.wait()
+        returncode = proc.wait()
+        if returncode != 0:
+            msg = "There was an error in the subprocess:\n " + proc.stderr.read()
+            raise ChildProcessError(msg)
 
 
 def main(method: str, dataset_dir: Path, gpus: str):
@@ -99,7 +102,7 @@ def main(method: str, dataset_dir: Path, gpus: str):
     # batch_size can't be larger for celldive + deepcell because all images have different shapes
     batch_size = 1
     segm_channels = ("nucleus", "cell")
-    print("Started segmentation pipeline" + str(start))
+    print("Started segmentation pipeline", str(start))
     print("Batch size is:", batch_size)
     gpus = gpus.lower()
     method = method.lower()
@@ -108,8 +111,8 @@ def main(method: str, dataset_dir: Path, gpus: str):
     gpu_ids = remove_gpus_if_more_than_imgs(dataset_dir, gpu_ids, segm_channels)
     run_segmentation(method, dataset_dir, gpu_ids, segm_channels)
     finish = datetime.now()
-    print("Finished segmentation pipeline" + str(finish))
-    print("Time elapsed " + str(finish - start))
+    print("Finished segmentation pipeline", str(finish))
+    print("Time elapsed ", str(finish - start))
 
 
 if __name__ == "__main__":
