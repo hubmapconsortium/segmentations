@@ -89,7 +89,7 @@ def write_stack_to_file(out_path: str, stack, mismatch: float):
     ome_meta = fill_in_ome_meta_template(stack.shape[-2], stack.shape[-1], dtype, mismatch)
     stack_shape = stack.shape
     new_stack_shape = [stack_shape[0], 1, stack_shape[1], stack_shape[2]]
-    with tif.TiffWriter(out_path) as TW:
+    with tif.TiffWriter(out_path, bigtiff=True) as TW:
         TW.write(
             stack.reshape(new_stack_shape).astype(dtype),
             contiguous=True,
