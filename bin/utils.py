@@ -18,6 +18,10 @@ def alpha_num_order(string: str) -> str:
     )
 
 
+def alpha_num_order_filename(path: Path) -> str:
+    return alpha_num_order(path.name)
+
+
 def path_to_str(path: Path):
     return str(path.absolute().as_posix())
 

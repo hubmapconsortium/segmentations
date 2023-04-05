@@ -8,7 +8,7 @@ from typing import Dict, Iterator, List, Tuple, Union
 import numpy as np
 import tifffile as tif
 
-from utils import alpha_num_order, get_img_listing, path_to_str
+from utils import alpha_num_order_filename, get_img_listing, path_to_str
 
 Image = np.ndarray
 
@@ -179,8 +179,9 @@ class BatchLoader:
         return all_img_info, all_img_sets
 
     def collect_img_dirs(self, dataset_dir: Path) -> Dict[str, Path]:
-        img_dirs = [p for p in list(dataset_dir.iterdir()) if p.is_dir()]
-        img_dirs = sorted(img_dirs, key=lambda path: alpha_num_order(path.name))
+        img_dirs = [p for p in dataset_dir.iterdir() if p.is_dir()]
+        img_dirs.append(dataset_dir)
+        img_dirs = sorted(img_dirs, key=alpha_num_order_filename)
         img_dirs_dict = dict()
         for img_dir in img_dirs:
             img_dirs_dict[img_dir.name] = img_dir
