@@ -1,13 +1,13 @@
 import argparse
-from pathlib import Path
-from typing import Dict, List, Tuple
 from datetime import datetime
+from pathlib import Path
+from typing import Dict, List
 
 import numpy as np
 
 from batch import BatchLoader
 from img_proc.match_masks import get_matched_masks
-from utils import make_dir_if_not_exists, path_to_str, write_stack_to_file
+from utils import path_to_str, write_stack_to_file
 
 Image = np.ndarray
 
@@ -18,11 +18,17 @@ def save_masks(
     info: List[Dict[str, str]],
     imgs: List[Dict[str, Image]],
 ):
+    # HACK
+    # TODO: clean this up properly
+    if not info and len(imgs) == 1:
+        info = [{".": ""}]
     for i, el in enumerate(info):
+        # TODO: figure out why we only want the first
         dir_name, img_set = list(el.items())[0]
         out_dir = base_out_dir / dir_name
-        make_dir_if_not_exists(out_dir)
-        img_name = img_set + "_" + base_img_name
+        out_dir.mkdir(exist_ok=True, parents=True)
+        img_prefix = f"{img_set}_" if img_set else ""
+        img_name = img_prefix + base_img_name
         channels = imgs[i]
         mask_stack = np.stack(
             [
