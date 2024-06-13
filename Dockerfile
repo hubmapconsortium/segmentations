@@ -1,4 +1,4 @@
-FROM ubuntu:bionic
+FROM ubuntu:24.04
 
 RUN apt-get -qq update \
     && apt-get -qq install --no-install-recommends --yes \
@@ -12,7 +12,7 @@ RUN apt-get -qq update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh \
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py310_24.4.0-0-Linux-x86_64.sh -O /tmp/miniconda.sh \
     && /bin/bash /tmp/miniconda.sh -b -p /opt/conda \
     && rm /tmp/miniconda.sh
 ENV PATH /opt/conda/bin:$PATH
@@ -21,7 +21,8 @@ RUN mkdir /output && chmod -R a+rwx /output
 
 # update base environment from yaml file
 COPY environment.yml /tmp/
-RUN conda env update -f /tmp/environment.yml \
+RUN conda update conda \
+    && conda env update -f /tmp/environment.yml \
     && echo "source activate base" > ~/.bashrc \
     && conda clean --index-cache --tarballs --yes \
     && pip cache purge \
