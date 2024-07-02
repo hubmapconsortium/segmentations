@@ -12,7 +12,7 @@ RUN apt-get -qq update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh \
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py37_23.1.0-1-Linux-x86_64.sh -O /tmp/miniconda.sh \
     && /bin/bash /tmp/miniconda.sh -b -p /opt/conda \
     && rm /tmp/miniconda.sh
 ENV PATH /opt/conda/bin:$PATH
@@ -20,6 +20,8 @@ ENV PATH /opt/conda/bin:$PATH
 RUN mkdir /output && chmod -R a+rwx /output
 
 # update base environment from yaml file
+RUN conda install -n base conda-libmamba-solver \
+  && conda config --set solver libmamba
 COPY environment.yml /tmp/
 RUN conda env update -f /tmp/environment.yml \
     && echo "source activate base" > ~/.bashrc \
