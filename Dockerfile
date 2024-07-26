@@ -12,6 +12,7 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py39_24.3.0-0-Li
  && /bin/bash /opt/miniconda.sh -b -p /opt/conda \
  && rm /opt/miniconda.sh
 ENV PATH /opt/conda/bin:$PATH
+ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/opt/conda/lib
 
 RUN mkdir /output && chmod -R a+rwx /output
 
