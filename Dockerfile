@@ -3,7 +3,7 @@ FROM nvidia/cuda:11.6.1-runtime-ubuntu20.04
 RUN apt-get update \
  && apt-get -y install --no-install-recommends \
     build-essential \
-    libcudnn8 \
+    libcudnn8=8.1.1.33-1+cuda11.2 \
     wget \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
