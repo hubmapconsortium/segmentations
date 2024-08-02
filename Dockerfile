@@ -12,7 +12,6 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py39_24.3.0-0-Li
  && /bin/bash /opt/miniconda.sh -b -p /opt/conda \
  && rm /opt/miniconda.sh
 ENV PATH /opt/conda/bin:$PATH
-ENV LD_LIBRARY_PATH $LD_LIBRARY_PATH:/opt/conda/lib
 
 RUN mkdir /output && chmod -R a+rwx /output
 
@@ -64,6 +63,9 @@ RUN mkdir -p /opt/.keras/models \
  && wget https://deepcell-data.s3-us-west-1.amazonaws.com/saved-models/MultiplexSegmentation-7.tar.gz \
  && tar -xvzf MultiplexSegmentation-7.tar.gz \
  && rm MultiplexSegmentation-7.tar.gz
+
+RUN mv /opt/conda/bin/python /opt/conda/bin/python-real
+COPY python-wrapper.sh /opt/conda/bin/python
 
 COPY keras.json /opt/.keras/.
 COPY bin /opt
