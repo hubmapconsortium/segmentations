@@ -22,9 +22,13 @@ class CellposeWrapper:
     def segment(self, img_batch: List[Dict[str, Image]]) -> List[Dict[str, Image]]:
         cell_channels, nuc_channels = self._prepare_channels(img_batch)
         gc.collect()
+        print("Starting Cell Segmentation")
         cell_masks = self._segment_cell(cell_channels)
+        print("Starting Nucleus Segmentation")
         nuc_masks = self._segment_nucleus(nuc_channels)
+        print("Getting Cell Boundaries")
         cell_boundaries = get_boundary(cell_masks)
+        print("Getting Nucleus Boundaries")
         nuc_boundaries = get_boundary(nuc_masks)
         gc.collect()
         batch_size = len(img_batch)
