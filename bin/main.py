@@ -2,6 +2,7 @@ import argparse
 import os
 import os.path as osp
 from datetime import datetime
+import faulthandler
 from pathlib import Path
 from subprocess import Popen, PIPE
 from typing import Dict, List, Tuple
@@ -122,6 +123,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--gpus", type=str, default="all", help="comma separated ids of gpus to use, e.g. 0,1,2"
     )
+    parser.add_argument("--enable-faulthandler", action="store_true")
     args = parser.parse_args()
-
+    if args.enable_faulthandler:
+        faulthandler.enable(all_threads=True)
     main(args.method, args.dataset_dir, args.gpus)
