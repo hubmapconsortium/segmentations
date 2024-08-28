@@ -126,5 +126,6 @@ if __name__ == "__main__":
     parser.add_argument("--enable-faulthandler", action="store_true")
     args = parser.parse_args()
     if args.enable_faulthandler:
+        print("Enabling Fault Handler")
         faulthandler.enable(all_threads=True)
     main(args.method, args.dataset_dir, args.gpus)

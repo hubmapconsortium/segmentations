@@ -2,7 +2,7 @@ import argparse
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
-
+import faulthandler
 import numpy as np
 
 from batch import BatchLoader
@@ -107,5 +107,5 @@ if __name__ == "__main__":
         help="comma separated types of channels for segmentation",
     )
     args = parser.parse_args()
-
+    faulthandler.enable(all_threads=True)
     main(args.method, args.dataset_dir, args.gpu_id, args.gpus, args.segm_channels)
