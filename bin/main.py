@@ -93,6 +93,7 @@ def run_segmentation(
         processes.append(Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE, universal_newlines=True))
     for proc in processes:
         returncode = proc.wait()
+        print(proc.stdout.read())
         if returncode != 0:
             msg = "There was an error in the subprocess:\n " + proc.stderr.read()
             raise ChildProcessError(msg)
