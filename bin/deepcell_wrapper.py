@@ -1,6 +1,7 @@
 import gc
 import warnings
 from typing import Dict, Optional, Tuple
+from datetime import datetime
 
 import numpy as np
 import tensorflow as tf
@@ -38,12 +39,12 @@ class DeepcellWrapper:
     def segment(self, img_batch: List[Dict[str, Image]]) -> List[Dict[str, Image]]:
         cell_channels = self._prepare_channels(img_batch)
         gc.collect()
-        print("Starting Cell & Nucleus Segmentation")
+        print(datetime.now(), "Starting Cell & Nucleus Segmentation")
         masks = self._segment_cell_and_nucleus(cell_channels)
         cell_masks, nuc_masks = self._separate_batch(masks)
-        print("Getting Cell Boundaries")
+        print(datetime.now(), "Getting Cell Boundaries")
         cell_boundaries = get_boundary(cell_masks)
-        print("Getting Nucleus Boundaries")
+        print(datetime.now(), "Getting Nucleus Boundaries")
         nuc_boundaries = get_boundary(nuc_masks)
         gc.collect()
         batch_size = len(img_batch)
