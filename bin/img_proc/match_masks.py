@@ -1,17 +1,18 @@
 from typing import Tuple
-
 import numpy as np
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, coo_matrix
 from skimage.segmentation import find_boundaries
+# from numba import njit
+
 
 Image = np.ndarray
 
 """
 Package functions that repair and generate matched cell, nuclear,
 cell membrane and nuclear membrane segmentation masks
-Author: Haoran Chen
-Version: 1.1
-08/09/2021
+Author: Haoran Chen and Ted Zhang
+Version: 2.0
+09/2024
 """
 
 
@@ -109,6 +110,109 @@ def get_fraction_matched_cells(
     )
     return fraction_matched_cells
 
+def get_boundary_2(mask: Image):
+    mask_boundary = find_boundaries(mask)
+    mask_boundary_indexed = mask_boundary * mask
+    return mask_boundary_indexed
+
+def get_matched_masks_optimized(mask_stack: Image, do_mismatch_repair: bool) -> Tuple[Image, float]:
+       
+    matched_mask_stack = mask_stack.copy()
+    whole_cell_mask = matched_mask_stack[0, :, :]
+    nuclear_mask = matched_mask_stack[1, :, :]
+    cell_membrane_mask = get_boundary_2(whole_cell_mask)
+
+    # Get unique labels, excluding background (label 0)
+    cell_labels = np.unique(whole_cell_mask)
+    nuclear_labels = np.unique(nuclear_mask)
+    cell_labels = cell_labels[cell_labels != 0]
+    nuclear_labels = nuclear_labels[nuclear_labels != 0]
+
+    # Create mapping from labels to indices
+    cell_label_to_index = {label: idx for idx, label in enumerate(cell_labels)}
+    nuclear_label_to_index = {label: idx for idx, label in enumerate(nuclear_labels)}
+
+    # Flatten masks and identify overlapping pixels
+    cell_mask_flat = whole_cell_mask.ravel()
+    nuclear_mask_flat = nuclear_mask.ravel()
+    valid_pixels = (cell_mask_flat > 0) & (nuclear_mask_flat > 0)
+
+    cell_labels_at_pixels = cell_mask_flat[valid_pixels]
+    nuclear_labels_at_pixels = nuclear_mask_flat[valid_pixels]
+    cell_indices = np.array([cell_label_to_index[label] for label in cell_labels_at_pixels])
+    nuclear_indices = np.array([nuclear_label_to_index[label] for label in nuclear_labels_at_pixels])
+
+    # Build overlap matrix using sparse representation
+    data = np.ones_like(cell_indices, dtype=np.int32)
+    num_cells = len(cell_labels)
+    num_nuclei = len(nuclear_labels)
+    overlap_matrix = coo_matrix(
+        (data, (cell_indices, nuclear_indices)),
+        shape=(num_cells, num_nuclei)
+    ).tocsr()
+
+    # Compute total pixels for each cell and nucleus
+    cell_sizes = np.bincount(cell_mask_flat, minlength=whole_cell_mask.max() + 1)[cell_labels]
+    nuclear_sizes = np.bincount(nuclear_mask_flat, minlength=nuclear_mask.max() + 1)[nuclear_labels]
+
+    # Compute overlap fractions
+    overlap_counts = overlap_matrix.toarray()
+    cell_overlap_fractions = overlap_counts / cell_sizes[:, np.newaxis]
+
+    # Find best matches based on overlap fractions
+    best_nucleus_indices = np.argmax(cell_overlap_fractions, axis=1)
+    best_overlap_fractions = cell_overlap_fractions[np.arange(num_cells), best_nucleus_indices]
+
+    matched_cell_indices = []
+    matched_nucleus_indices = []
+    for i in range(num_cells):
+        nucleus_idx = best_nucleus_indices[i]
+        mismatch_fraction = 1 - best_overlap_fractions[i]
+        if do_mismatch_repair or mismatch_fraction == 0:
+            matched_cell_indices.append(i)
+            matched_nucleus_indices.append(nucleus_idx)
+
+    # Create matched masks
+    cell_matched_mask = np.zeros_like(whole_cell_mask)
+    nuclear_matched_mask = np.zeros_like(nuclear_mask)
+    for cell_idx, nucleus_idx in zip(matched_cell_indices, matched_nucleus_indices):
+        cell_label = cell_labels[cell_idx]
+        nucleus_label = nuclear_labels[nucleus_idx]
+        cell_pixels = (whole_cell_mask == cell_label)
+        nucleus_pixels = (nuclear_mask == nucleus_label)
+
+        if do_mismatch_repair:
+            # Keep only overlapping pixels
+            matched_nucleus_pixels = nucleus_pixels & cell_pixels
+        else:
+            matched_nucleus_pixels = nucleus_pixels
+
+        cell_matched_mask[cell_pixels] = cell_label
+        nuclear_matched_mask[matched_nucleus_pixels] = nucleus_label
+
+    # Generate boundary masks
+    cell_membrane_mask = get_boundary_2(cell_matched_mask)
+    nuclear_membrane_mask = get_boundary_2(nuclear_matched_mask)
+
+    # Compute fraction of matched cells
+    if do_mismatch_repair:
+        fraction_matched_cells = 1.0
+    else:
+        matched_cell_num = len(matched_cell_indices)
+        total_cell_num = len(cell_labels)
+        total_nuclei_num = len(nuclear_labels)
+        mismatched_cell_num = total_cell_num - matched_cell_num
+        mismatched_nuclei_num = total_nuclei_num - matched_cell_num
+        fraction_matched_cells = matched_cell_num / (
+            mismatched_cell_num + mismatched_nuclei_num + matched_cell_num
+        )
+
+    matched_mask_stack[0, :, :] = cell_matched_mask
+    matched_mask_stack[1, :, :] = nuclear_matched_mask
+    matched_mask_stack[2, :, :] = cell_membrane_mask
+    matched_mask_stack[3, :, :] = nuclear_membrane_mask
+
+    return matched_mask_stack, fraction_matched_cells
 
 def get_matched_masks(mask_stack: Image, do_mismatch_repair: bool) -> Tuple[Image, float]:
     """
@@ -122,6 +226,35 @@ def get_matched_masks(mask_stack: Image, do_mismatch_repair: bool) -> Tuple[Imag
     cell_coords = get_indices_sparse(whole_cell_mask)[1:]
     nucleus_coords = get_indices_sparse(nuclear_mask)[1:]
     cell_membrane_coords = get_indices_sparse(cell_membrane_mask)[1:]
+
+    # # Get unique labels, excluding background (label 0)
+    # cell_labels = np.unique(whole_cell_mask)
+    # nuclear_labels = np.unique(nuclear_mask)
+    # cell_labels = cell_labels[cell_labels != 0]
+    # nuclear_labels = nuclear_labels[nuclear_labels != 0]
+
+    # Create mapping from labels to indices
+    # cell_label_to_index = {label: idx for idx, label in enumerate(cell_labels)}
+    # nuclear_label_to_index = {label: idx for idx, label in enumerate(nuclear_labels)}
+
+    # # Flatten masks and identify overlapping pixels
+    # cell_mask_flat = whole_cell_mask.ravel()
+    # nuclear_mask_flat = nuclear_mask.ravel()
+    # valid_pixels = (cell_mask_flat > 0) & (nuclear_mask_flat > 0)
+
+    # cell_labels_at_pixels = cell_mask_flat[valid_pixels]
+    # nuclear_labels_at_pixels = nuclear_mask_flat[valid_pixels]
+    # cell_indices = np.array([cell_label_to_index[label] for label in cell_labels_at_pixels])
+    # nuclear_indices = np.array([nuclear_label_to_index[label] for label in nuclear_labels_at_pixels])
+
+    # # Build overlap matrix using sparse representation
+    # data = np.ones_like(cell_indices, dtype=np.int32)
+    # num_cells = len(cell_labels)
+    # num_nuclei = len(nuclear_labels)
+    # overlap_matrix = coo_matrix(
+    #     (data, (cell_indices, nuclear_indices)),
+    #     shape=(num_cells, num_nuclei)
+    # ).tocsr()
 
     cell_coords = list(map(lambda x: np.array(x).T, cell_coords))
     nucleus_coords = list(map(lambda x: np.array(x).T, nucleus_coords))
