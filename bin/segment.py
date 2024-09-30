@@ -6,7 +6,7 @@ from typing import Dict, List
 import numpy as np
 
 from batch import BatchLoader
-from img_proc.match_masks import get_matched_masks
+from img_proc.match_masks import get_matched_masks, get_matched_masks_optimized
 from utils import path_to_str, write_stack_to_file
 
 Image = np.ndarray
@@ -41,7 +41,7 @@ def save_masks(
         )
         st = datetime.now()
         print("Started matching cell and nuclei", str(st))
-        matched_stack, fraction_matched = get_matched_masks(mask_stack, True)
+        matched_stack, fraction_matched = get_matched_masks_optimized(mask_stack, True)
         fin = datetime.now()
         print("Finished matching", str(fin))
         print("Time elapsed", str(fin - st))
