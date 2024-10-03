@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from match_masks import get_matched_masks, get_matched_masks_optimized
+from match_masks import get_matched_masks
 
 class TestGetMatchedMasks(unittest.TestCase):
     def setUp(self):
@@ -31,7 +31,7 @@ class TestGetMatchedMasks(unittest.TestCase):
         )
 
         # Run the optimized function
-        optimized_result, optimized_fraction = get_matched_masks_optimized(
+        optimized_result, optimized_fraction = get_matched_masks(
             self.mask_stack, self.do_mismatch_repair
         )
 
