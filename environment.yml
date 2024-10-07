@@ -14,3 +14,4 @@ dependencies:
   - pip:
     - cellpose~=0.6.5
     - deepcell~=0.12.9
+    - numba
