@@ -3,6 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
 
+import manhole
 import numpy as np
 
 from batch import BatchLoader
@@ -93,6 +94,8 @@ def main(method: str, dataset_dir: Path, gpu_id: str, gpu_ids: str, segm_channel
 
 
 if __name__ == "__main__":
+    manhole.install()
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--method", type=str, help="segmentation method cellpose or deepcell")
     parser.add_argument("--dataset_dir", type=Path, help="path to directory with images")
