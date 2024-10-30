@@ -185,8 +185,6 @@ def get_matched_masks(mask_stack: Image, do_mismatch_repair: bool) -> Tuple[Imag
     # Create mapping from labels to indices
     cell_label_to_index = {label: idx for idx, label in enumerate(cell_labels)}
     nuclear_label_to_index = {label: idx for idx, label in enumerate(nuclear_labels)}
-    index_to_cell_label = {idx: label for idx, label in enumerate(cell_labels)}
-    index_to_nuclear_label = {idx: label for idx, label in enumerate(nuclear_labels)}
 
     # Flatten masks and identify overlapping pixels
     cell_mask_flat = whole_cell_mask.ravel()
@@ -205,48 +203,77 @@ def get_matched_masks(mask_stack: Image, do_mismatch_repair: bool) -> Tuple[Imag
         shape=(num_cells, num_nuclei)
     ).tocsr()
 
-    # Compute total pixels for each cell and nucleus
+    # Compute total pixels for each cell
     cell_sizes = np.bincount(cell_mask_flat, minlength=whole_cell_mask.max() + 1)
     cell_sizes = cell_sizes[cell_labels]
-    nuclear_sizes = np.bincount(nuclear_mask_flat, minlength=nuclear_mask.max() + 1)
-    nuclear_sizes = nuclear_sizes[nuclear_labels]
 
-    # Initialize used nuclei flags
-    used_nuclei_flags = np.zeros(num_nuclei, dtype=np.bool_)
+    # Initialize arrays to store the best match for each cell
+    best_nucleus_indices = np.full(num_cells, -1, dtype=int)
+    best_overlap_fractions = np.zeros(num_cells, dtype=float)
+    used_nuclei = np.zeros(num_nuclei, dtype=bool)
 
-    # Call the Numba-optimized function
-    best_nucleus_indices, best_overlap_fractions = find_best_matches_numba(
-        num_cells,
-        overlap_matrix.indptr,
-        overlap_matrix.indices,
-        overlap_matrix.data,
-        cell_sizes,
-        used_nuclei_flags,
-        do_mismatch_repair,
-    )
+    # Find best matches per cell
+    for cell_idx in range(num_cells):
+        start_ptr = overlap_matrix.indptr[cell_idx]
+        end_ptr = overlap_matrix.indptr[cell_idx + 1]
+        nucleus_indices = overlap_matrix.indices[start_ptr:end_ptr]
+        overlap_counts = overlap_matrix.data[start_ptr:end_ptr]
 
-    # Create matched masks
-    cell_matched_mask = np.zeros_like(whole_cell_mask)
-    nuclear_matched_mask = np.zeros_like(nuclear_mask)
+        if len(nucleus_indices) == 0:
+            continue  # No overlapping nuclei for this cell
+
+        cell_size = cell_sizes[cell_idx]
+        overlap_fractions = overlap_counts / cell_size
+
+        # Find the nucleus with the maximum overlap fraction
+        max_idx = np.argmax(overlap_fractions)
+        best_nucleus_idx = nucleus_indices[max_idx]
+        best_overlap_fraction = overlap_fractions[max_idx]
+
+        mismatch_fraction = 1 - best_overlap_fraction
+        if not do_mismatch_repair and mismatch_fraction > 0:
+            continue  # Skip mismatched cells if not repairing
+
+        if used_nuclei[best_nucleus_idx]:
+            continue  # Nucleus already matched to another cell
+
+        best_nucleus_indices[cell_idx] = best_nucleus_idx
+        used_nuclei[best_nucleus_idx] = True
+
+    # Create label mapping arrays
+    cell_label_mapping = np.zeros(whole_cell_mask.max() + 1, dtype=int)
+    nuclear_label_mapping = np.zeros(nuclear_mask.max() + 1, dtype=int)
 
     for cell_idx in range(num_cells):
+        cell_label = cell_labels[cell_idx]
         nucleus_idx = best_nucleus_indices[cell_idx]
+
         if nucleus_idx == -1:
             continue  # No matching nucleus
 
-        cell_label = index_to_cell_label[cell_idx]
-        nucleus_label = index_to_nuclear_label[nucleus_idx]
-        cell_pixels = (whole_cell_mask == cell_label)
-        nucleus_pixels = (nuclear_mask == nucleus_label)
+        nucleus_label = nuclear_labels[nucleus_idx]
+        cell_label_mapping[cell_label] = cell_label  # Keep the same label
+        nuclear_label_mapping[nucleus_label] = nucleus_label  # Keep the same label
 
         if do_mismatch_repair:
-            # Keep only overlapping pixels
-            matched_nucleus_pixels = nucleus_pixels & cell_pixels
-        else:
-            matched_nucleus_pixels = nucleus_pixels
+            # Map nucleus labels only where they overlap with cell
+            pass  # We will handle mismatch repair separately
 
-        cell_matched_mask[cell_pixels] = cell_label
-        nuclear_matched_mask[matched_nucleus_pixels] = nucleus_label
+    # Remap the cell mask
+    cell_matched_mask = cell_label_mapping[whole_cell_mask]
+
+    # For the nuclear mask, we need to handle mismatch repair if necessary
+    if do_mismatch_repair:
+        # Assign nucleus labels only where they overlap with matched cells
+        # Identify pixels where the cell label mapping is non-zero
+        matched_cell_pixels = cell_matched_mask > 0
+        # Remap the nuclear mask
+        nuclear_mapped_labels = nuclear_label_mapping[nuclear_mask]
+        nuclear_matched_mask = np.zeros_like(nuclear_mask)
+        nuclear_matched_mask[matched_cell_pixels] = nuclear_mapped_labels[matched_cell_pixels]
+    else:
+        # Remap the nuclear mask entirely
+        nuclear_matched_mask = nuclear_label_mapping[nuclear_mask]
 
     # Generate boundary masks
     cell_membrane_mask = get_boundary(cell_matched_mask)
@@ -256,12 +283,11 @@ def get_matched_masks(mask_stack: Image, do_mismatch_repair: bool) -> Tuple[Imag
     if do_mismatch_repair:
         fraction_matched_cells = 1.0
     else:
-        matched_cell_indices = np.where(best_nucleus_indices != -1)[0]
-        matched_cell_num = len(matched_cell_indices)
+        matched_cell_num = np.count_nonzero(best_nucleus_indices != -1)
         total_cell_num = num_cells
         total_nuclei_num = num_nuclei
         mismatched_cell_num = total_cell_num - matched_cell_num
-        mismatched_nuclei_num = total_nuclei_num - used_nuclei_flags.sum()
+        mismatched_nuclei_num = total_nuclei_num - used_nuclei.sum()
         fraction_matched_cells = matched_cell_num / (
             mismatched_cell_num + mismatched_nuclei_num + matched_cell_num
         )
