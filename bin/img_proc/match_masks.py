@@ -138,6 +138,11 @@ def get_matched_masks(mask_stack: Image, do_mismatch_repair: bool) -> Tuple[Imag
             nuclear_search_num = np.unique(
                 list(map(lambda x: nuclear_mask[tuple(x)], current_cell_coords))
             )
+            if len(nuclear_search_num) == 0 :
+                print("No nucleus found for cell ", i)
+                cell_matched_list.append(cell_coords[i])
+                cell_matched_index_list.append(i)
+                continue
             best_mismatch_fraction = 1
             whole_cell_best = []
             for j in nuclear_search_num:
