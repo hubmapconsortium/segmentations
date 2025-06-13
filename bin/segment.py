@@ -40,6 +40,7 @@ def save_masks(
             axis=0,
         )
         st = datetime.now()
+        write_stack_to_file(path_to_str(out_dir / "test"), mask_stack,0)
         print("Started matching cell and nuclei", str(st))
         matched_stack, fraction_matched = get_matched_masks(mask_stack, True)
         fin = datetime.now()
