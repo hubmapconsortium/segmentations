@@ -139,7 +139,7 @@ def get_matched_masks(mask_stack: Image, do_mismatch_repair: bool) -> Tuple[Imag
                 list(map(lambda x: nuclear_mask[tuple(x)], current_cell_coords))
             )
             if len(nuclear_search_num) == 0 :
-                print("No nucleus found for cell ", i)
+                print("No nucleus overlap for cell ", i)
                 cell_matched_list.append(cell_coords[i])
                 cell_matched_index_list.append(i)
                 continue
@@ -168,6 +168,11 @@ def get_matched_masks(mask_stack: Image, do_mismatch_repair: bool) -> Tuple[Imag
                 nucleus_matched_list.append(nucleus_best)
                 cell_matched_index_list.append(i_ind)
                 nucleus_matched_index_list.append(j_ind)
+            else:
+                print("No nucleus found for cell ", i)
+                cell_matched_list.append(cell_coords[i])
+                cell_matched_index_list.append(i)
+
 
     del cell_coords
     del nucleus_coords
