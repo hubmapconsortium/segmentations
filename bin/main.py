@@ -89,6 +89,7 @@ def run_segmentation(
             gpus=",".join(str(i) for i in gpu_ids),
             dataset_dir=path_to_str(dataset_dir),
             segm_channels=",".join(segm_channels),
+            allow_cells_only=allow_cells_only
         )
         processes.append(Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE, universal_newlines=True))
     for proc in processes:
