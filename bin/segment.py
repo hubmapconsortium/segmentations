@@ -17,6 +17,7 @@ def save_masks(
     base_img_name: str,
     info: List[Dict[str, str]],
     imgs: List[Dict[str, Image]],
+    allow_cells_only = False
 ):
     # HACK
     # TODO: clean this up properly
@@ -42,7 +43,7 @@ def save_masks(
         st = datetime.now()
         #write_stack_to_file(path_to_str(out_dir / "test"), mask_stack,0)
         print("Started matching cell and nuclei", str(st))
-        matched_stack, fraction_matched = get_matched_masks(mask_stack, True)
+        matched_stack, fraction_matched = get_matched_masks(mask_stack, True, allow_cells_only=allow_cells_only)
         fin = datetime.now()
         print("Finished matching", str(fin))
         print("Time elapsed", str(fin - st))
@@ -66,7 +67,7 @@ def get_segmentation_method(method: str):
     return segmenter
 
 
-def main(method: str, dataset_dir: Path, gpu_id: str, gpu_ids: str, segm_channels_str: str):
+def main(method: str, dataset_dir: Path, gpu_id: str, gpu_ids: str, segm_channels_str: str, allow_cells_only=False):
     out_base_img_name = "mask.ome.tiff"
     out_base_dir = Path("/output/")
 
@@ -89,7 +90,7 @@ def main(method: str, dataset_dir: Path, gpu_id: str, gpu_ids: str, segm_channel
         except StopIteration:
             break
         segmented_batch = segmenter.segment(img_batch)
-        save_masks(out_base_dir, out_base_img_name, info_batch, segmented_batch)
+        save_masks(out_base_dir, out_base_img_name, info_batch, segmented_batch, allow_cells_only=allow_cells_only)
     segmenter.close_session()
 
 
@@ -101,6 +102,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--gpus", type=str, default="0", help="comma separated ids of gpus to use, e.g. 0,1,2"
     )
+    parser.add_argument("--allow_cells_only", type=bool, default=False, help="allow cells without nucleus")
     parser.add_argument(
         "--segm_channels",
         type=str,
@@ -109,4 +111,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    main(args.method, args.dataset_dir, args.gpu_id, args.gpus, args.segm_channels)
+    main(args.method, args.dataset_dir, args.gpu_id, args.gpus, args.segm_channels, allow_cells_only=args.allow_cells_only)
