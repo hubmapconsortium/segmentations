@@ -69,6 +69,10 @@ def run_segmentation(
 ):
     self_location = osp.realpath(osp.join(os.getcwd(), osp.dirname(__file__)))
     script_path = osp.join(self_location, "segment.py")
+    if allow_cells_only:
+        cells_str = "--allow_cells_only"
+    else:
+        cells_str = ""
     cmd_template = (
         "CUDA_VISIBLE_DEVICES={gpu_id} "
         + ' python "{script_path}" '
@@ -77,7 +81,7 @@ def run_segmentation(
         + " --gpu_id {gpu_id} "
         + ' --gpus "{gpus}" '
         + ' --segm_channels "{segm_channels}" '
-        + ' --allow_cells_only "{allow_cells_only}" '
+        + cells_str
     )
 
     processes = []
@@ -89,7 +93,6 @@ def run_segmentation(
             gpus=",".join(str(i) for i in gpu_ids),
             dataset_dir=path_to_str(dataset_dir),
             segm_channels=",".join(segm_channels),
-            allow_cells_only=allow_cells_only
         )
         processes.append(Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE, universal_newlines=True))
     for proc in processes:
