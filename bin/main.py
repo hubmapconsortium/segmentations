@@ -65,10 +65,14 @@ def remove_gpus_if_more_than_imgs(
 
 
 def run_segmentation(
-    method: str, dataset_dir: Path, gpu_ids: List[int], segm_channels: Tuple[str]
+    method: str, dataset_dir: Path, gpu_ids: List[int], segm_channels: Tuple[str], allow_cells_only=False
 ):
     self_location = osp.realpath(osp.join(os.getcwd(), osp.dirname(__file__)))
     script_path = osp.join(self_location, "segment.py")
+    if allow_cells_only:
+        cells_str = "--allow_cells_only"
+    else:
+        cells_str = ""
     cmd_template = (
         "CUDA_VISIBLE_DEVICES={gpu_id} "
         + ' python "{script_path}" '
@@ -77,6 +81,7 @@ def run_segmentation(
         + " --gpu_id {gpu_id} "
         + ' --gpus "{gpus}" '
         + ' --segm_channels "{segm_channels}" '
+        + cells_str
     )
 
     processes = []
@@ -97,7 +102,7 @@ def run_segmentation(
             raise ChildProcessError(msg)
 
 
-def main(method: str, dataset_dir: Path, gpus: str):
+def main(method: str, dataset_dir: Path, gpus: str, allow_cells_only=False):
     start = datetime.now()
     # batch_size can't be larger for celldive + deepcell because all images have different shapes
     batch_size = 1
@@ -109,7 +114,7 @@ def main(method: str, dataset_dir: Path, gpus: str):
 
     gpu_ids = get_allowed_gpu_ids(gpus)
     gpu_ids = remove_gpus_if_more_than_imgs(dataset_dir, gpu_ids, segm_channels)
-    run_segmentation(method, dataset_dir, gpu_ids, segm_channels)
+    run_segmentation(method, dataset_dir, gpu_ids, segm_channels, allow_cells_only)
     finish = datetime.now()
     print("Finished segmentation pipeline", str(finish))
     print("Time elapsed ", str(finish - start))
@@ -122,6 +127,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--gpus", type=str, default="all", help="comma separated ids of gpus to use, e.g. 0,1,2"
     )
+    parser.add_argument("--allow_cells_only", type=bool, default=False, help="allow cells without nucleus")
     args = parser.parse_args()
 
-    main(args.method, args.dataset_dir, args.gpus)
+    main(args.method, args.dataset_dir, args.gpus, args.allow_cells_only)

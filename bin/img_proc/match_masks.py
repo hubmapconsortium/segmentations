@@ -110,7 +110,7 @@ def get_fraction_matched_cells(
     return fraction_matched_cells
 
 
-def get_matched_masks(mask_stack: Image, do_mismatch_repair: bool) -> Tuple[Image, float]:
+def get_matched_masks(mask_stack: Image, do_mismatch_repair: bool, allow_cells_only = False) -> Tuple[Image, float]:
     """
     returns masks with matched cells and nuclei
     """
@@ -138,6 +138,12 @@ def get_matched_masks(mask_stack: Image, do_mismatch_repair: bool) -> Tuple[Imag
             nuclear_search_num = np.unique(
                 list(map(lambda x: nuclear_mask[tuple(x)], current_cell_coords))
             )
+            #If allow_only_cells option then allow cells without nucleus
+            if allow_cells_only and len(nuclear_search_num) == 0 :
+                print("No nucleus overlap for cell ", i)
+                cell_matched_list.append(cell_coords[i])
+                cell_matched_index_list.append(i)
+                continue
             best_mismatch_fraction = 1
             whole_cell_best = []
             for j in nuclear_search_num:
@@ -163,6 +169,12 @@ def get_matched_masks(mask_stack: Image, do_mismatch_repair: bool) -> Tuple[Imag
                 nucleus_matched_list.append(nucleus_best)
                 cell_matched_index_list.append(i_ind)
                 nucleus_matched_index_list.append(j_ind)
+            elif allow_cells_only:
+                # If allow_only_cells option then allow cells without nucleus
+                print("No nucleus found for cell ", i)
+                cell_matched_list.append(cell_coords[i])
+                cell_matched_index_list.append(i)
+
 
     del cell_coords
     del nucleus_coords
